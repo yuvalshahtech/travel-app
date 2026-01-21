@@ -1,0 +1,131 @@
+import sqlite3
+import os
+
+DATABASE_FILE = "auth.db"
+
+def get_db_connection():
+    """Create and return a database connection"""
+    conn = sqlite3.connect(DATABASE_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_database():
+    """Initialize the database and create tables if they don't exist"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Create users table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Extra safety: ensure unique index exists even if schema was created differently before
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(email);
+    """)
+    
+    # Create email_verifications table for OTP verification
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS email_verifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            otp TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+    print("Database initialized successfully")
+
+def get_user_by_email(email):
+    """Get user by email"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
+def create_user(email, password_hash):
+    """Create a new user"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO users (email, password_hash) VALUES (?, ?)",
+            (email, password_hash)
+        )
+        conn.commit()
+        user_id = cursor.lastrowid
+        conn.close()
+        return user_id
+    except sqlite3.IntegrityError:
+        conn.close()
+        return None
+
+def user_exists(email):
+    """Check if user exists"""
+    user = get_user_by_email(email)
+    return user is not None
+
+def create_email_verification(email, password_hash, otp, expires_at):
+    """Store email verification record"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO email_verifications (email, password_hash, otp, expires_at)
+            VALUES (?, ?, ?, ?)
+        """, (email, password_hash, otp, expires_at))
+        conn.commit()
+        verification_id = cursor.lastrowid
+        conn.close()
+        return verification_id
+    except sqlite3.IntegrityError:
+        # Email already in verification, delete old one and create new
+        cursor.execute("DELETE FROM email_verifications WHERE email = ?", (email,))
+        conn.commit()
+        cursor.execute("""
+            INSERT INTO email_verifications (email, password_hash, otp, expires_at)
+            VALUES (?, ?, ?, ?)
+        """, (email, password_hash, otp, expires_at))
+        conn.commit()
+        verification_id = cursor.lastrowid
+        conn.close()
+        return verification_id
+
+def get_email_verification(email):
+    """Get email verification record"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM email_verifications WHERE email = ?", (email,))
+    record = cursor.fetchone()
+    conn.close()
+    return record
+
+def delete_email_verification(email):
+    """Delete email verification record after successful verification"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM email_verifications WHERE email = ?", (email,))
+    conn.commit()
+    conn.close()
+    
+def email_verification_exists(email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT 1 FROM email_verifications WHERE email = ?",
+        (email,)
+    )
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
