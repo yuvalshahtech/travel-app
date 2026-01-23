@@ -1,7 +1,7 @@
-from backend.models import user
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from passlib.exc import UnknownHashError
-from backend.models.user import User, UserResponse
+from backend.models.user import User
 from backend.utils.database import (
     user_exists, create_user, get_user_by_email,
     create_email_verification, get_email_verification, delete_email_verification, email_verification_exists
@@ -54,17 +54,18 @@ async def signup(user: User):
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to prepare verification.")
     
-    # Send OTP to email
-    # NOTE: In development, you can comment this out and log the OTP instead
+    # Send OTP to email (MUST succeed in production - no fallback)
     email_sent = send_otp_email(user.email, otp)
-    
+
     if not email_sent:
-        # For development: return OTP in response
-        return {
-            "message": "Signup prepared. Check your email for OTP.",
-            "email": user.email,
-            "otp": otp  # Remove in production
-        }
+        return JSONResponse(
+            status_code=503,
+            content={
+                "message": "Failed to send OTP email. Please try again.",
+                "email": user.email,
+                "error": "email_send_failed"
+            }
+        )
     
     return {
         "message": "Signup prepared. Check your email for OTP.",

@@ -1,187 +1,90 @@
-# Authentication System
+# Authentication API (FastAPI + Brevo OTP)
 
-A complete authentication system with FastAPI backend and vanilla JavaScript frontend.
+Production-ready email OTP signup flow with FastAPI backend and simple HTML frontend.
 
 ## Project Structure
 
 ```
 Travel-App/
-├── backend/
-│   ├── main.py           # FastAPI application
-│   ├── requirements.txt  # Python dependencies
-│   ├── models/
-│   │   └── user.py      # User models
-│   ├── routes/
-│   │   └── auth.py      # Authentication endpoints
-│   └── utils/
-│       ├── auth.py      # Password hashing (bcrypt)
-│       ├── database.py  # Database operations
-│       ├── otp.py       # OTP generation and validation
-│       └── email.py     # Email sending
-└── src/
-    ├── login.html       # Login page
-    ├── signup.html      # Signup + OTP verification page
-    └── dashboard.html   # Dashboard page
+├─ backend/
+│  ├─ main.py              # FastAPI app entry
+│  ├─ requirements.txt     # Python deps
+│  ├─ routes/auth.py       # /signup, /verify-otp, /login
+│  └─ utils/               # auth, database, otp, email
+└─ src/
+   ├─ signup.html          # Signup + OTP form
+   ├─ login.html           # Login
+   └─ dashboard.html       # Placeholder
 ```
 
-## Setup Instructions
+## Quick Start (Windows + PowerShell)
 
-### Backend Setup
-
-1. Navigate to the backend directory:
-   ```
-   cd backend
-   ```
-
-2. Install Python dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-
-3. Run the FastAPI server:
-   ```
-   python main.py
-   ```
-
-   The server will start at `http://localhost:8000`
-
-### Frontend Setup
-
-1. Open the HTML files directly in your browser, or use a simple HTTP server:
-   
-   From the `src` directory:
-   ```
-   python -m http.server 3000
-   ```
-
-2. Access the application:
-   - Signup: `http://localhost:3000/signup.html`
-   - Login: `http://localhost:3000/login.html`
-
-## Features
-
-### Signup Flow (Email OTP Verification)
-- User enters email and password
-- OTP (6-digit code) is generated and sent to email
-- User must verify OTP before account is created
-- Pending OTP signups do not block re-signup attempts
-- On successful verification, user is redirected to login
-
-### Login Flow
-- Credentials prefilled if redirected from signup
-- On successful login, shows "Login Successful" message
-- Redirects to dashboard
-
-### Security
-- Passwords hashed using bcrypt (72-byte max length)
-- OTP valid for 10 minutes; expires and requires new signup
-- No plain text passwords stored
-- Email uniqueness enforced at database level
-- CORS enabled for frontend-backend communication
-
-## API Endpoints
-
-### POST /signup
-Initiates signup and sends OTP.
-
-Request:
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
+1) Install dependencies
+```
+cd backend
+pip install -r requirements.txt
 ```
 
-Response (success):
-```json
-{
-  "message": "Signup prepared. Check your email for OTP.",
-  "email": "user@example.com"
-}
+2) Configure environment variables (root .env or session)
+- Create `.env` in project root (Travel-App/.env):
+```
+BREVO_API_KEY=xkeysib-your-api-key
+SENDER_EMAIL=your-verified-sender@example.com
+SENDER_NAME=Travel App
+DEV_MODE=false
+```
+  or set for current session:
+```
+$env:BREVO_API_KEY="xkeysib-your-api-key"
+$env:SENDER_EMAIL="your-verified-sender@example.com"
+$env:SENDER_NAME="Travel App"
+$env:DEV_MODE="false"
 ```
 
-### POST /verify-otp
-Verifies OTP and creates account.
-
-Request:
-```json
-{
-  "email": "user@example.com",
-  "otp": "123456"
-}
+3) Verify env vars are visible to Python
+```
+cd backend
+python -c "import os;print('BREVO_API_KEY:', 'SET' if os.getenv('BREVO_API_KEY') else 'NOT SET');print('SENDER_EMAIL:', os.getenv('SENDER_EMAIL','NOT SET'))"
 ```
 
-Response (success):
-```json
-{
-  "message": "Email verified. Account created successfully.",
-  "user_id": 1,
-  "email": "user@example.com"
-}
+4) Start the API server
 ```
-
-### POST /login
-Request:
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
+cd ..
+uvicorn backend.main:app --reload
 ```
+Runs at http://localhost:8000
 
-Response (success):
-```json
-{
-  "id": 1,
-  "email": "user@example.com",
-  "message": "Login successful"
-}
+5) Test signup (no frontend)
 ```
-
-## Database
-
-SQLite database (`auth.db`) is created automatically on first run.
-
-**users table:** Stores verified accounts
-```sql
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+$body = @{ email = "test@example.com"; password = "Pass123!" } | ConvertTo-Json
+curl -X POST http://localhost:8000/signup -H "Content-Type: application/json" -d $body
 ```
+Expected (success): `{ "message": "Signup prepared. Check your email for OTP.", "email": "..." }`
 
-**email_verifications table:** Temporary OTP records (deleted after verification)
-```sql
-CREATE TABLE email_verifications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    otp TEXT NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+## OTP & Email Flow (High Level)
+- User submits email + password to `/signup`.
+- Backend generates a 6‑digit OTP, stores a pending record, and emails the OTP via Brevo.
+- User calls `/verify-otp` with the code to create the account.
+- OTP expires in 10 minutes. OTP is never returned by the API.
+- If email sending fails, the API returns a clean error (HTTP 503).
+
+## Environment Variables
+- `BREVO_API_KEY` (required): Brevo transactional API key (starts with `xkeysib-`).
+- `SENDER_EMAIL` (required): Must be verified in Brevo dashboard (Settings → Senders).
+- `SENDER_NAME` (optional): Friendly sender name. Default: "Travel App".
+- `DEV_MODE` (optional): `true/1/yes` logs OTP on failure for local debugging.
+
+## Common Blockers (Fix First)
+- Sender not verified in Brevo → Verify at https://app.brevo.com/settings/senders.
+- Env vars not loaded → Ensure they show as SET via the Python check above.
+- 401 from Brevo → Wrong/expired `BREVO_API_KEY`.
+
+## Minimal Frontend (optional)
+Serve static files to use the HTML pages:
 ```
+cd src
+python -m http.server 3000
+```
+Open: http://localhost:3000/signup.html
 
-## Technologies Used
-
-### Frontend
-- Plain HTML5
-- CSS3 (no frameworks)
-- Vanilla JavaScript (ES6+)
-- Fetch API for HTTP requests
-- LocalStorage for temporary credential storage
-
-### Backend
-- FastAPI (Python web framework)
-- SQLite (database)
-- Pydantic (data validation)
-- Uvicorn (ASGI server)
-
-## Notes
-
-- This is a basic authentication system for learning purposes
-- No JWT tokens or session management implemented
-- LocalStorage is used only for temporary credential prefilling
-- Database file is created in the backend directory
+That’s it. You can sign up, receive the OTP by email, verify, and log in.

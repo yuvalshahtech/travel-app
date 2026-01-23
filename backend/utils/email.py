@@ -1,39 +1,56 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import os
+import logging
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
 
-# NOTE: For production, use environment variables for credentials
-# For development/testing, this can be configured with your email provider
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-SENDER_EMAIL = "your-email@gmail.com"  # Change this
-SENDER_PASSWORD = "your-app-password"  # Use app-specific password
+# Configure logging for email debugging
+logger = logging.getLogger(__name__)
+
+# ✅ Use environment variables for credentials
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDER_NAME = os.getenv("SENDER_NAME", "Travel App")
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() in ("1", "true", "yes")
+
+logger.info(f"ENV CHECK → BREVO_API_KEY loaded: {bool(BREVO_API_KEY)}")
+logger.info(f"ENV CHECK → SENDER_EMAIL: {SENDER_EMAIL}")
 
 def send_otp_email(recipient_email: str, otp: str) -> bool:
     """
-    Send OTP via email
-    Returns True if successful, False otherwise
+    Send OTP via Brevo Transactional Email API.
     
-    For Gmail:
-    1. Enable 2FA
-    2. Create app-specific password
-    3. Use that password here
+    Returns True if successfully submitted to Brevo.
+    Returns False and logs errors if Brevo rejects or API fails.
+    
+    CRITICAL: Does NOT return OTP. Must be delivered via Brevo only.
     """
+    
+    # Validate configuration
+    if not BREVO_API_KEY:
+        logger.error("BREVO_API_KEY environment variable not set")
+        return False
+    
+    if not SENDER_EMAIL:
+        logger.error("SENDER_EMAIL environment variable not set")
+        return False
+    
+    logger.info(f"Preparing OTP email: recipient={recipient_email}, sender={SENDER_EMAIL}")
+
     try:
-        message = MIMEMultipart("alternative")
-        message["Subject"] = "Your OTP Code"
-        message["From"] = SENDER_EMAIL
-        message["To"] = recipient_email
+        # Configure Brevo API client
+        configuration = sib_api_v3_sdk.Configuration()
+        configuration.api_key['api-key'] = BREVO_API_KEY
+        api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
 
         # Plain text version
-        text = f"""Your OTP code is: {otp}
+        text_content = f"""Your OTP code is: {otp}
 
 This code will expire in 10 minutes.
 
 If you didn't request this, please ignore this email."""
 
         # HTML version
-        html = f"""
+        html_content = f"""
         <html>
             <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px;">
                 <div style="background-color: white; padding: 20px; border-radius: 8px; max-width: 400px; margin: 0 auto;">
@@ -49,18 +66,39 @@ If you didn't request this, please ignore this email."""
         </html>
         """
 
-        part1 = MIMEText(text, "plain")
-        part2 = MIMEText(html, "html")
-        message.attach(part1)
-        message.attach(part2)
+        # Create email object with all mandatory Brevo fields
+        send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+            to=[{"email": recipient_email}],
+            sender={"email": SENDER_EMAIL, "name": SENDER_NAME},
+            subject="Your OTP Code for Signing In",
+            html_content=html_content,
+            text_content=text_content
+        )
 
-        # Send email
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.sendmail(SENDER_EMAIL, recipient_email, message.as_string())
+        logger.debug(f"SendSmtpEmail object created: to={recipient_email}, sender_email={SENDER_EMAIL}")
 
+        # Send email via Brevo API
+        response = api_instance.send_transac_email(send_smtp_email)
+        
+        # Log successful response
+        logger.info(f"Brevo API response: {response}")
+        logger.info(f"Email message ID from Brevo: {getattr(response, 'message_id', 'N/A')}")
+        
         return True
+
+    except ApiException as e:
+        # Log detailed API exception
+        logger.error("Brevo API exception occurred while sending OTP email")
+        logger.error(f"  Status code: {getattr(e, 'status', 'unknown')}")
+        logger.error(f"  Reason: {getattr(e, 'reason', 'unknown')}")
+        logger.error(f"  Body: {getattr(e, 'body', 'unknown')}")
+        if DEV_MODE:
+            logger.info(f"DEV_MODE enabled — OTP for {recipient_email}: {otp}")
+        return False
+        
     except Exception as e:
-        print(f"Error sending email: {e}")
+        # Log any other exceptions
+        logger.error(f"Unexpected error sending OTP email: {type(e).__name__}: {e}", exc_info=True)
+        if DEV_MODE:
+            logger.info(f"DEV_MODE enabled — OTP for {recipient_email}: {otp}")
         return False

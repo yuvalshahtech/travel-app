@@ -1,7 +1,16 @@
+from dotenv import load_dotenv
+load_dotenv()
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routes.auth import router as auth_router
 from backend.utils.database import init_database
+
+# Configure logging to see email debugging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 # Initialize FastAPI app
 app = FastAPI(title="Authentication API", version="1.0.0")

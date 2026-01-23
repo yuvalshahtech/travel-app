@@ -1,7 +1,8 @@
 import sqlite3
 import os
 
-DATABASE_FILE = "auth.db"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATABASE_FILE = os.path.join(BASE_DIR, "auth.db")
 
 def get_db_connection():
     """Create and return a database connection"""
