@@ -494,9 +494,11 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    showMessage('Email verified! Account created. Redirecting to login...', 'success');
-                    localStorage.setItem('prefill_email', pendingEmail);
-                    setTimeout(goToLogin, 1500);
+                    showMessage('Email verified! Account created. Redirecting...', 'success');
+                    localStorage.setItem('userEmail', pendingEmail);
+                    setTimeout(() => {
+                        window.location.href = 'home.html';
+                    }, 1500);
                 } else if (response.status === 410) {
                     showMessage('OTP expired. Please sign up again.', 'error');
                     setTimeout(() => {

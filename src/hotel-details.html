@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Details - Travel Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+        }
+
+        header {
+            background-color: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 15px 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .header-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #FF5A5F;
+            text-decoration: none;
+        }
+
+        button {
+            background-color: #FF5A5F;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #E74C52;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .back-button {
+            color: #FF5A5F;
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            padding: 0;
+        }
+
+        .back-button:hover {
+            text-decoration: underline;
+        }
+
+        .hotel-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .hotel-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 8px;
+            background-color: #e0e0e0;
+        }
+
+        .hotel-details-main {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hotel-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #222;
+        }
+
+        .hotel-location {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .hotel-rating {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .star {
+            color: #FF5A5F;
+            font-size: 20px;
+        }
+
+        .rating-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #222;
+        }
+
+        .hotel-price-section {
+            margin: 25px 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .price-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .price-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #222;
+        }
+
+        .room-type {
+            display: inline-block;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+
+        .book-button {
+            padding: 16px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: auto;
+        }
+
+        .book-button:hover {
+            background-color: #E74C52;
+        }
+
+        .description-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #222;
+        }
+
+        .description-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #666;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-item {
+            border-left: 4px solid #FF5A5F;
+            padding-left: 15px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #222;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+            font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .hotel-header {
+                grid-template-columns: 1fr;
+            }
+
+            .hotel-title {
+                font-size: 24px;
+            }
+
+            .price-value {
+                font-size: 28px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="home.html" class="logo">✈️ Travel Explorer</a>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <button class="back-button" onclick="goBack()">← Back to Search</button>
+
+        <div id="hotelDetails" class="loading">Loading hotel details...</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication
+            const userEmail = localStorage.getItem('userEmail');
+            if (!userEmail) {
+                window.location.href = 'signup.html';
+                return;
+            }
+
+            // Get hotel ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const hotelId = urlParams.get('id');
+
+            if (!hotelId) {
+                document.getElementById('hotelDetails').innerHTML = '<div class="loading">Hotel not found</div>';
+                return;
+            }
+
+            // Load hotel details
+            fetch(`/hotels/${hotelId}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Hotel not found');
+                    return response.json();
+                })
+                .then(hotel => {
+                    renderHotelDetails(hotel);
+                })
+                .catch(error => {
+                    console.error('Error loading hotel:', error);
+                    document.getElementById('hotelDetails').innerHTML = '<div class="loading">Failed to load hotel details</div>';
+                });
+        });
+
+        function renderHotelDetails(hotel) {
+            const html = `
+                <div class="hotel-header">
+                    <img src="${hotel.image_url || 'https://via.placeholder.com/400x300?text=Hotel'}" alt="${hotel.name}" class="hotel-image" />
+                    <div class="hotel-details-main">
+                        <h1 class="hotel-title">${hotel.name}</h1>
+                        <p class="hotel-location">📍 ${hotel.city}, ${hotel.country}</p>
+                        
+                        <div class="hotel-rating">
+                            <span class="star">★</span>
+                            <span class="rating-value">${hotel.rating.toFixed(2)}</span>
+                        </div>
+
+                        <span class="room-type">${hotel.room_type}</span>
+
+                        <div class="hotel-price-section">
+                            <div class="price-label">Price per night</div>
+                            <div class="price-value">₹${(Math.round(hotel.price)).toLocaleString('en-IN')}</div>
+                        </div>
+
+                        <button class="book-button" onclick="bookNow(${hotel.id}, '${hotel.name}')">Book Now</button>
+                    </div>
+                </div>
+
+                <div class="description-section">
+                    <h2 class="section-title">About this place</h2>
+                    <p class="description-text">${hotel.description || 'No description available'}</p>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Room Type</div>
+                        <div class="info-value">${hotel.room_type}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Location</div>
+                        <div class="info-value">${hotel.city}, ${hotel.country}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Rating</div>
+                        <div class="info-value">⭐ ${hotel.rating.toFixed(2)}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Price per Night</div>
+                        <div class="info-value">₹${(Math.round(hotel.price)).toLocaleString('en-IN')}</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('hotelDetails').innerHTML = html;
+        }
+
+        function bookNow(hotelId, hotelName) {
+            alert(`🎉 Booking feature coming soon!\n\nYou're about to book: ${hotelName}\n\nThis is a demo version without payment processing.`);
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        function logout() {
+            localStorage.removeItem('userEmail');
+            window.location.href = 'signup.html';
+        }
+    </script>
+</body>
+</html>
