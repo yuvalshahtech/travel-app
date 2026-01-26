@@ -1,7 +1,7 @@
 # Set Brevo environment variables for the current session
 
 # REQUIRED: Set your Brevo API key here
-$env:BREVO_API_KEY = "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"
+$env:BREVO_API_KEY = "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"
 # OPTIONAL: Customize sender details (must be verified in Brevo dashboard)
 $env:SENDER_EMAIL = "yuvalshahtech@gmail.com"
 $env:SENDER_NAME = "Travel-App"

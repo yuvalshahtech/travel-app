@@ -375,8 +375,9 @@
                 if (response.ok) {
                     showMessage('Login Successful', 'success');
                     clearPrefillData();
+                    localStorage.setItem('userEmail', email);
                     setTimeout(() => {
-                        window.location.href = 'dashboard.html';
+                        window.location.href = 'home.html';
                     }, 900);
                 } else {
                     showMessage(data.detail || 'Invalid email or password.', 'error');

@@ -49,7 +49,9 @@ python -c "import os;print('BREVO_API_KEY:', 'SET' if os.getenv('BREVO_API_KEY')
 
 4) Start the API server
 ```
-cd ..
+cd backend
+python main.py
+# or
 uvicorn backend.main:app --reload
 ```
 Runs at http://localhost:8000

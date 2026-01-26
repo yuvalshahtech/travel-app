@@ -1,9 +1,13 @@
 from dotenv import load_dotenv
 load_dotenv()
 import logging
+import os
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from backend.routes.auth import router as auth_router
+from backend.routes.hotels import router as hotels_router
 from backend.utils.database import init_database
 
 # Configure logging to see email debugging
@@ -29,8 +33,14 @@ app.add_middleware(
 async def startup_event():
     init_database()
 
+# Mount static files directory for uploads
+uploads_dir = Path(__file__).parent / "uploads"
+if uploads_dir.exists():
+    app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+
 # Include routers
 app.include_router(auth_router)
+app.include_router(hotels_router)
 
 # Root endpoint
 @app.get("/")

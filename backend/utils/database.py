@@ -42,6 +42,24 @@ def init_database():
         )
     """)
     
+    # Create hotels table for travel discovery
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS hotels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            city TEXT NOT NULL,
+            country TEXT NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            price REAL NOT NULL,
+            room_type TEXT NOT NULL,
+            rating REAL DEFAULT 4.5,
+            description TEXT,
+            image_url TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
     conn.commit()
     conn.close()
     print("Database initialized successfully")
@@ -130,3 +148,61 @@ def email_verification_exists(email):
     exists = cursor.fetchone() is not None
     conn.close()
     return exists
+# Hotel-related functions
+def create_hotel(name, city, country, latitude, longitude, price, room_type, rating=4.5, description=None, image_url=None):
+    """Create a new hotel"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO hotels (name, city, country, latitude, longitude, price, room_type, rating, description, image_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (name, city, country, latitude, longitude, price, room_type, rating, description, image_url))
+    conn.commit()
+    hotel_id = cursor.lastrowid
+    conn.close()
+    return hotel_id
+
+def get_hotel_by_id(hotel_id):
+    """Get hotel by ID"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM hotels WHERE id = ?", (hotel_id,))
+    hotel = cursor.fetchone()
+    conn.close()
+    return hotel
+
+def get_recent_hotels(limit=10):
+    """Get recently listed hotels ordered by creation date"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM hotels ORDER BY created_at DESC LIMIT ?
+    """, (limit,))
+    hotels = cursor.fetchall()
+    conn.close()
+    return hotels
+
+def get_hotels_by_city(city, limit=50):
+    """Get hotels filtered by city"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM hotels WHERE city = ? ORDER BY created_at DESC LIMIT ?
+    """, (city, limit))
+    hotels = cursor.fetchall()
+    conn.close()
+    return hotels
+
+def search_hotels(query, limit=50):
+    """Search hotels by name, city, or country"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    search_term = f"%{query}%"
+    cursor.execute("""
+        SELECT * FROM hotels 
+        WHERE name LIKE ? OR city LIKE ? OR country LIKE ?
+        ORDER BY created_at DESC LIMIT ?
+    """, (search_term, search_term, search_term, limit))
+    hotels = cursor.fetchall()
+    conn.close()
+    return hotels
