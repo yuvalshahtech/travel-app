@@ -1,7 +1,13 @@
 .env
 __pycache__/
 *.pyc
-set_brevo_env.ps1
+*.log
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
 node_modules/
 frontend/node_modules/
-.env
+set_brevo_env.ps1
+backend/auth.db

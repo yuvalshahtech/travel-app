@@ -4,9 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search Results - Travel Explorer</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
+        :root {
+            --brand-red: #d90429;
+            --brand-red-dark: #b50321;
+            --brand-red-light: rgba(217, 4, 41, 0.08);
+            --brand-red-border: rgba(217, 4, 41, 0.18);
+            --brand-red-glow: rgba(217, 4, 41, 0.35);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -41,7 +50,7 @@
         .logo {
             font-size: 20px;
             font-weight: bold;
-            color: #FF5A5F;
+            color: var(--brand-red);
             text-decoration: none;
             white-space: nowrap;
         }
@@ -61,7 +70,7 @@
         }
 
         button {
-            background-color: #FF5A5F;
+            background-color: var(--brand-red);
             color: white;
             border: none;
             padding: 8px 16px;
@@ -72,19 +81,20 @@
         }
 
         button:hover {
-            background-color: #E74C52;
+            background-color: var(--brand-red-dark);
         }
 
         .container {
             display: flex;
+            flex-direction: row-reverse;
             height: calc(100vh - 70px);
             max-width: 1400px;
             margin: 0 auto;
+            position: relative;
         }
 
         .map-container {
             flex: 1;
-            min-width: 50%;
             position: relative;
         }
 
@@ -94,28 +104,314 @@
         }
 
         .list-container {
-            flex: 0 0 400px;
+            flex: 0 0 380px;
             overflow-y: auto;
             background: white;
-            border-left: 1px solid #e0e0e0;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
         }
 
         .hotel-list-header {
-            padding: 20px;
+            padding: 16px;
             border-bottom: 1px solid #e0e0e0;
-            background-color: #f9f9f9;
-            position: sticky;
-            top: 0;
+            background-color: #fff;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
         }
 
         .hotel-list-header h2 {
             font-size: 16px;
-            margin-bottom: 5px;
+            margin: 0;
+            flex: 1;
+        }
+
+        .filters-btn {
+            background-color: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .filters-btn:hover {
+            background-color: #E74C52;
         }
 
         .hotel-count {
             font-size: 12px;
             color: #999;
+            margin-top: 8px;
+        }
+
+        #hotelList {
+            flex: 1;
+            overflow-y: auto;
+            background: white;
+        }
+
+        /* Floating Filter Panel */
+        .filter-panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 999;
+        }
+
+        .filter-panel-overlay.open {
+            display: block;
+        }
+
+        .filter-panel {
+            position: fixed;
+            left: 20px;
+            top: 90px;
+            width: 360px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            max-height: calc(100vh - 130px);
+            overflow-y: auto;
+        }
+
+        .filter-panel.open {
+            display: flex;
+        }
+
+        .filter-panel-header {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .filter-panel-header h3 {
+            font-size: 16px;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .filter-panel-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            color: #999;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .filter-panel-close:hover {
+            color: #333;
+        }
+
+        .filter-panel-content {
+            padding: 12px 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .filter-section {
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .filter-section-header {
+            padding: 12px 16px;
+            background: #f9f9f9;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .filter-section-header:hover {
+            background-color: #f0f0f0;
+        }
+
+        .filter-section-header.selected {
+            background-color: #FFF5F5;
+            color: var(--brand-red);
+            font-weight: 600;
+        }
+
+        .filter-section-header .lucide,
+        .filters-btn .lucide {
+            width: 16px;
+            height: 16px;
+            color: currentColor;
+        }
+
+        .filter-section-header.inactive .lucide {
+            color: #999;
+        }
+
+        .filter-section-header.selected .lucide {
+            color: var(--brand-red);
+        }
+
+        .filter-section-header.inactive {
+            color: #888;
+            font-weight: 500;
+        }
+
+        .filter-section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .filter-section-summary {
+            font-size: 11px;
+            color: #777;
+            background: #f1f1f1;
+            padding: 2px 6px;
+            border-radius: 999px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
+            display: none;
+        }
+
+        .filter-section-header.selected .filter-section-summary {
+            display: inline-flex;
+            color: #B83B40;
+            background: #FFE3E5;
+        }
+
+        .filter-section-icon {
+            display: inline-block;
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+
+        .filter-section-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .filter-section-content {
+            display: none;
+            padding: 12px 16px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .filter-section-content.expanded {
+            display: block;
+        }
+
+        .filter-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-input-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .filter-input-group input {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            box-sizing: border-box;
+        }
+
+        .filter-input-group input:focus {
+            outline: none;
+            border-color: var(--brand-red);
+            box-shadow: 0 0 0 2px var(--brand-red-glow);
+        }
+
+        .filter-panel-footer {
+            padding: 12px 16px;
+            border-top: 1px solid #e0e0e0;
+            background: #f9f9f9;
+            flex-shrink: 0;
+        }
+
+        .filter-button-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-apply-btn {
+            flex: 1;
+            background-color: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            display: none;
+        }
+
+        .filter-apply-btn.show {
+            display: block;
+        }
+
+        .filter-apply-btn:hover:not(:disabled) {
+            background-color: #E74C52;
+        }
+
+        .filter-apply-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .filter-apply-count {
+            font-size: 12px;
+            font-weight: 600;
+            white-space: normal;
+        }
+
+        .filter-clear-btn {
+            flex: 1;
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .filter-clear-btn:hover {
+            background-color: #e0e0e0;
         }
 
         .hotel-list-item {
@@ -131,7 +427,7 @@
 
         .hotel-list-item.active {
             background-color: #fff5f6;
-            border-left: 4px solid #FF5A5F;
+            border-left: 4px solid var(--brand-red);
             padding-left: 16px;
         }
 
@@ -169,7 +465,7 @@
         }
 
         .star {
-            color: #FF5A5F;
+            color: var(--brand-red);
         }
 
         .loading {
@@ -233,6 +529,175 @@
             align-items: center;
         }
 
+        /* Custom Map Marker Styles */
+        .custom-marker {
+            /* Inactive state - solid, readable, map-aware */
+            background: #eef1f4;
+            color: var(--brand-red);
+            padding: 10px 14px;
+            border-radius: 24px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow:
+                0 8px 20px rgba(0, 0, 0, 0.18),
+                0 2px 8px rgba(0, 0, 0, 0.12);
+            border: 1.5px solid rgba(217, 4, 41, 0.45);
+            white-space: nowrap;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .custom-marker:hover {
+            /* Subtle emphasis on hover for inactive pins */
+            background: #e4e8ec;
+            box-shadow:
+                0 10px 24px rgba(0, 0, 0, 0.22),
+                0 3px 10px rgba(0, 0, 0, 0.14);
+            border-color: rgba(217, 4, 41, 0.55);
+            transform: translateY(-1px);
+            z-index: 1000 !important;
+        }
+
+        .custom-marker::after {
+            /* Triangle pointer - inactive state */
+            content: '';
+            position: absolute;
+            bottom: -9px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 11px;
+            height: 11px;
+            background: #eef1f4;
+            border-left: 1.5px solid rgba(217, 4, 41, 0.45);
+            border-bottom: 1.5px solid rgba(217, 4, 41, 0.45);
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.12);
+        }
+
+        .custom-marker:hover::after {
+            background: #e4e8ec;
+            border-color: rgba(217, 4, 41, 0.55);
+        }
+
+        .custom-marker-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .marker-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--brand-red);
+            flex-shrink: 0;
+        }
+
+        .marker-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .marker-part {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
+
+        .marker-amenities .marker-text {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0;
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .marker-text {
+            display: inline-block;
+        }
+
+        .marker-sep {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .custom-marker.simple {
+            background: transparent;
+            color: var(--brand-red);
+            border: none;
+            padding: 0;
+            box-shadow: none;
+        }
+
+        .custom-marker.simple::after {
+            display: none;
+        }
+
+        .custom-marker-pin {
+            width: 39px;
+            height: 39px;
+            color: var(--brand-red);
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.22));
+        }
+
+        .custom-marker.simple:hover .custom-marker-pin {
+            color: var(--brand-red-dark);
+        }
+
+        /* Active / Selected state - solid, confident, primary */
+        .custom-marker.active {
+            background: var(--brand-red);
+            color: #ffffff;
+            border: 1.5px solid var(--brand-red);
+            transform: scale(1.14);
+            box-shadow: 
+                0 10px 28px rgba(0, 0, 0, 0.28),
+                0 4px 12px rgba(0, 0, 0, 0.18),
+                0 0 0 3px var(--brand-red-glow);
+            z-index: 1001 !important;
+        }
+
+        .custom-marker.active::after {
+            /* Triangle pointer - active state solid */
+            background: var(--brand-red);
+            border-left: 1.5px solid var(--brand-red);
+            border-bottom: 1.5px solid var(--brand-red);
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .custom-marker.active:hover {
+            /* Hover on active pin */
+            background: var(--brand-red-dark);
+            border-color: var(--brand-red-dark);
+        }
+
+        .custom-marker.active:hover::after {
+            background: var(--brand-red-dark);
+            border-left-color: var(--brand-red-dark);
+            border-bottom-color: var(--brand-red-dark);
+        }
+
+        .custom-marker.active .custom-marker-content {
+            text-shadow: none;
+        }
+
+        /* Remove default Leaflet marker styling */
+        .custom-marker-wrapper {
+            background: transparent !important;
+            border: none !important;
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -269,9 +734,158 @@
         <div class="list-container">
             <div class="hotel-list-header">
                 <h2>Results</h2>
-                <div class="hotel-count" id="hotelCount">Loading...</div>
+                <button class="filters-btn" onclick="openFilterPanel()">
+                    <i data-lucide="filter"></i>
+                    <span>Filters</span>
+                </button>
             </div>
+            <div class="hotel-count" id="hotelCount" style="padding: 0 16px;">Loading...</div>
             <div id="hotelList"></div>
+        </div>
+    </div>
+
+    <!-- Floating Filter Panel -->
+    <div class="filter-panel-overlay" id="filterPanelOverlay" onclick="if(event.target === this) closeFilterPanel()"></div>
+    <div class="filter-panel" id="filterPanel" onclick="event.stopPropagation()">
+        <div class="filter-panel-header">
+            <h3>Filters</h3>
+            <button class="filter-panel-close" onclick="closeFilterPanel()">✕</button>
+        </div>
+
+        <div class="filter-panel-content">
+            <!-- Price Filter Section -->
+            <div class="filter-section" data-filter="price">
+                <div class="filter-section-header inactive" onclick="toggleFilterSection('price')">
+                    <span class="filter-section-title">
+                        <i data-lucide="indian-rupee"></i>
+                        <span>Price Range</span>
+                        <span class="filter-section-summary" data-summary="price"></span>
+                    </span>
+                    <span class="filter-section-icon" id="priceIcon">▼</span>
+                </div>
+                <div class="filter-section-content" id="priceContent">
+                    <div class="filter-input-group">
+                        <label>Minimum Price (₹)</label>
+                        <input type="number" id="minPriceInput" placeholder="e.g., 2000" min="0" />
+                        
+                        <label>Maximum Price (₹)</label>
+                        <input type="number" id="maxPriceInput" placeholder="e.g., 7000" min="0" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guest Capacity Filter Section -->
+            <div class="filter-section" data-filter="guests">
+                <div class="filter-section-header inactive" onclick="toggleFilterSection('guests')">
+                    <span class="filter-section-title">
+                        <i data-lucide="users"></i>
+                        <span>Guest Capacity</span>
+                        <span class="filter-section-summary" data-summary="guests"></span>
+                    </span>
+                    <span class="filter-section-icon" id="guestsIcon">▼</span>
+                </div>
+                <div class="filter-section-content" id="guestsContent">
+                    <div class="filter-input-group">
+                        <label>Minimum Guests</label>
+                        <input type="number" id="guestsInput" placeholder="e.g., 2" min="1" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rating Filter Section -->
+            <div class="filter-section" data-filter="rating">
+                <div class="filter-section-header inactive" onclick="toggleFilterSection('rating')">
+                    <span class="filter-section-title">
+                        <i data-lucide="star"></i>
+                        <span>Rating</span>
+                        <span class="filter-section-summary" data-summary="rating"></span>
+                    </span>
+                    <span class="filter-section-icon" id="ratingIcon">▼</span>
+                </div>
+                <div class="filter-section-content" id="ratingContent">
+                    <div class="filter-input-group">
+                        <label>Minimum Rating</label>
+                        <input type="number" id="minRatingInput" placeholder="e.g., 4.0" min="0" max="5" step="0.5" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property Type Filter Section -->
+            <div class="filter-section" data-filter="property">
+                <div class="filter-section-header inactive" onclick="toggleFilterSection('property')">
+                    <span class="filter-section-title">
+                        <i data-lucide="home"></i>
+                        <span>Property Type</span>
+                        <span class="filter-section-summary" data-summary="property"></span>
+                    </span>
+                    <span class="filter-section-icon" id="propertyIcon">▼</span>
+                </div>
+                <div class="filter-section-content" id="propertyContent">
+                    <div class="filter-input-group" style="gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="propertyVilla" value="Villa" style="cursor: pointer;" />
+                            <span>Villa</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="propertyApartment" value="Apartment" style="cursor: pointer;" />
+                            <span>Apartment</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="propertyRoom" value="Room" style="cursor: pointer;" />
+                            <span>Room</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="propertyResort" value="Resort" style="cursor: pointer;" />
+                            <span>Resort</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amenities Filter Section -->
+            <div class="filter-section" data-filter="amenities">
+                <div class="filter-section-header inactive" onclick="toggleFilterSection('amenities')">
+                    <span class="filter-section-title">
+                        <i data-lucide="check-circle"></i>
+                        <span>Amenities</span>
+                        <span class="filter-section-summary" data-summary="amenities"></span>
+                    </span>
+                    <span class="filter-section-icon" id="amenitiesIcon">▼</span>
+                </div>
+                <div class="filter-section-content" id="amenitiesContent">
+                    <div class="filter-input-group" style="gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="amenityWiFi" value="Wi-Fi" style="cursor: pointer;" />
+                            <span>Wi-Fi</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="amenityPool" value="Pool" style="cursor: pointer;" />
+                            <span>Pool</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="amenityBeach" value="Beach access" style="cursor: pointer;" />
+                            <span>Beach access</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="amenityAC" value="AC" style="cursor: pointer;" />
+                            <span>AC</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="amenityKitchen" value="Kitchen" style="cursor: pointer;" />
+                            <span>Kitchen</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-panel-footer">
+            <div class="filter-button-group">
+                <button class="filter-apply-btn" id="applyBtn" onclick="applyPriceFilter()">
+                    <span class="filter-apply-count">Apply Filters</span>
+                </button>
+                <button class="filter-clear-btn" onclick="clearPriceFilter()">Clear</button>
+            </div>
         </div>
     </div>
 
@@ -288,14 +902,391 @@
             }
         })();
     </script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module">
-        import { searchHotels } from './services/api.js';
+        import { searchHotels, searchHotelsWithFilters } from './services/api.js';
         let map;
         let markers = [];
         let currentHotels = [];
         let currentHotelId = null;
+        let currentSearchQuery = '';
+        let selectedFilters = new Set(); // Track which filter types are selected
+        let expandedFilter = null; // Track which filter is currently expanded
+
+        // Floating Filter Panel - Open/Close
+        function openFilterPanel() {
+            const overlay = document.querySelector('.filter-panel-overlay');
+            const panel = document.querySelector('.filter-panel');
+            const listContainer = document.querySelector('.list-container');
+            if (overlay && panel) {
+                if (listContainer) {
+                    const listRect = listContainer.getBoundingClientRect();
+                    const minLeft = 16;
+                    panel.style.left = `${Math.max(minLeft, listRect.left)}px`;
+                    panel.style.right = 'auto';
+                    panel.style.top = `${Math.max(90, listRect.top)}px`;
+                }
+                overlay.classList.add('open');
+                panel.classList.add('open');
+            }
+        }
+
+        function closeFilterPanel() {
+            const overlay = document.querySelector('.filter-panel-overlay');
+            const panel = document.querySelector('.filter-panel');
+            if (overlay && panel) {
+                overlay.classList.remove('open');
+                panel.classList.remove('open');
+            }
+        }
+
+        // Toggle individual filter sections
+        function toggleFilterSection(filterType) {
+            const section = document.querySelector(`.filter-section[data-filter="${filterType}"]`);
+            if (!section) {
+                console.warn(`Filter section with data-filter="${filterType}" not found`);
+                return;
+            }
+
+            const header = section.querySelector('.filter-section-header');
+            const content = section.querySelector('.filter-section-content');
+            const icon = section.querySelector('.filter-section-icon');
+            
+            if (!header || !content) {
+                console.warn(`Header or content not found for filter "${filterType}"`);
+                return;
+            }
+
+            const isExpanded = expandedFilter === filterType;
+
+            // Collapse other sections when opening a new one
+            if (expandedFilter && expandedFilter !== filterType) {
+                collapseFilterSection(expandedFilter);
+            }
+
+            if (isExpanded) {
+                content.classList.remove('expanded');
+                if (icon) icon.classList.remove('expanded');
+                expandedFilter = null;
+            } else {
+                content.classList.add('expanded');
+                if (icon) icon.classList.add('expanded');
+                expandedFilter = filterType;
+            }
+
+            updateFilterHeaderState();
+            updateApplyButtonVisibility();
+        }
+
+        function collapseFilterSection(filterType) {
+            const section = document.querySelector(`.filter-section[data-filter="${filterType}"]`);
+            if (!section) return;
+            const header = section.querySelector('.filter-section-header');
+            const content = section.querySelector('.filter-section-content');
+            const icon = section.querySelector('.filter-section-icon');
+            if (content) content.classList.remove('expanded');
+            if (icon) icon.classList.remove('expanded');
+            if (header) header.classList.remove('selected');
+            if (header && !isFilterActive(filterType)) header.classList.add('inactive');
+            if (expandedFilter === filterType) expandedFilter = null;
+        }
+
+        function updateFilterHeaderState() {
+            const priceSummary = document.querySelector('[data-summary="price"]');
+            const guestsSummary = document.querySelector('[data-summary="guests"]');
+            const ratingSummary = document.querySelector('[data-summary="rating"]');
+
+            const minPrice = document.getElementById('minPriceInput').value;
+            const maxPrice = document.getElementById('maxPriceInput').value;
+            const guests = document.getElementById('guestsInput').value;
+            const minRating = document.getElementById('minRatingInput').value;
+
+            if (priceSummary) {
+                if (minPrice || maxPrice) {
+                    const minLabel = minPrice ? `₹${Number(minPrice).toLocaleString('en-IN')}` : 'Any';
+                    const maxLabel = maxPrice ? `₹${Number(maxPrice).toLocaleString('en-IN')}` : 'Any';
+                    priceSummary.textContent = `${minLabel} - ${maxLabel}`;
+                } else {
+                    priceSummary.textContent = '';
+                }
+            }
+
+            if (guestsSummary) {
+                guestsSummary.textContent = guests ? `${guests}+ guests` : '';
+            }
+
+            if (ratingSummary) {
+                ratingSummary.textContent = minRating ? `${minRating}★+` : '';
+            }
+
+            const propertySummary = document.querySelector('[data-summary="property"]');
+            if (propertySummary) {
+                const selectedTypes = [];
+                if (document.getElementById('propertyVilla').checked) selectedTypes.push('Villa');
+                if (document.getElementById('propertyApartment').checked) selectedTypes.push('Apartment');
+                if (document.getElementById('propertyRoom').checked) selectedTypes.push('Room');
+                if (document.getElementById('propertyResort').checked) selectedTypes.push('Resort');
+                propertySummary.textContent = selectedTypes.length > 0 ? selectedTypes.join(', ') : '';
+            }
+
+            const amenitiesSummary = document.querySelector('[data-summary="amenities"]');
+            if (amenitiesSummary) {
+                const selectedAmenities = [];
+                if (document.getElementById('amenityWiFi').checked) selectedAmenities.push('Wi-Fi');
+                if (document.getElementById('amenityPool').checked) selectedAmenities.push('Pool');
+                if (document.getElementById('amenityBeach').checked) selectedAmenities.push('Beach access');
+                if (document.getElementById('amenityAC').checked) selectedAmenities.push('AC');
+                if (document.getElementById('amenityKitchen').checked) selectedAmenities.push('Kitchen');
+                amenitiesSummary.textContent = selectedAmenities.length > 0 ? selectedAmenities.join(', ') : '';
+            }
+
+            ['price', 'guests', 'rating', 'property', 'amenities'].forEach((type) => {
+                const header = document.querySelector(`.filter-section[data-filter="${type}"] .filter-section-header`);
+                if (!header) return;
+                if (isFilterActive(type)) {
+                    header.classList.add('selected');
+                    header.classList.remove('inactive');
+                } else {
+                    header.classList.remove('selected');
+                    header.classList.add('inactive');
+                }
+            });
+        }
+
+        // Check if any filter has values
+        function isFilterActive(filterType) {
+            if (filterType === 'price') {
+                const minPrice = document.getElementById('minPriceInput').value;
+                const maxPrice = document.getElementById('maxPriceInput').value;
+                return minPrice || maxPrice;
+            } else if (filterType === 'guests') {
+                return document.getElementById('guestsInput').value;
+            } else if (filterType === 'rating') {
+                return document.getElementById('minRatingInput').value;
+            } else if (filterType === 'property') {
+                return document.getElementById('propertyVilla').checked ||
+                       document.getElementById('propertyApartment').checked ||
+                       document.getElementById('propertyRoom').checked ||
+                       document.getElementById('propertyResort').checked;
+            } else if (filterType === 'amenities') {
+                return document.getElementById('amenityWiFi').checked ||
+                       document.getElementById('amenityPool').checked ||
+                       document.getElementById('amenityBeach').checked ||
+                       document.getElementById('amenityAC').checked ||
+                       document.getElementById('amenityKitchen').checked;
+            }
+            return false;
+        }
+
+        function getSelectedAmenities() {
+            const selectedAmenities = [];
+            if (document.getElementById('amenityWiFi').checked) selectedAmenities.push('Wi-Fi');
+            if (document.getElementById('amenityPool').checked) selectedAmenities.push('Pool');
+            if (document.getElementById('amenityBeach').checked) selectedAmenities.push('Beach access');
+            if (document.getElementById('amenityAC').checked) selectedAmenities.push('AC');
+            if (document.getElementById('amenityKitchen').checked) selectedAmenities.push('Kitchen');
+            return selectedAmenities;
+        }
+
+        // CENTRALIZED FILTER APPLICATION - single source of truth
+        async function applyFilters() {
+            if (!currentSearchQuery) {
+                return;
+            }
+
+            // Read all filter values
+            const minPrice = parseFloat(document.getElementById('minPriceInput').value);
+            const maxPrice = parseFloat(document.getElementById('maxPriceInput').value);
+            const guests = parseInt(document.getElementById('guestsInput').value);
+            const minRating = parseFloat(document.getElementById('minRatingInput').value);
+            
+            // Read property type checkboxes
+            const propertyTypes = [];
+            if (document.getElementById('propertyVilla').checked) propertyTypes.push('Villa');
+            if (document.getElementById('propertyApartment').checked) propertyTypes.push('Apartment');
+            if (document.getElementById('propertyRoom').checked) propertyTypes.push('Room');
+            if (document.getElementById('propertyResort').checked) propertyTypes.push('Resort');
+
+            // Read amenities checkboxes
+            const amenities = [];
+            if (document.getElementById('amenityWiFi').checked) amenities.push('Wi-Fi');
+            if (document.getElementById('amenityPool').checked) amenities.push('Pool');
+            if (document.getElementById('amenityBeach').checked) amenities.push('Beach access');
+            if (document.getElementById('amenityAC').checked) amenities.push('AC');
+            if (document.getElementById('amenityKitchen').checked) amenities.push('Kitchen');
+
+            // Validation
+            if (minPrice < 0 || maxPrice < 0 || (minPrice && maxPrice && minPrice > maxPrice)) {
+                alert('Please enter valid price ranges (min <= max)');
+                return;
+            }
+            
+            if (guests && guests < 1) {
+                alert('Guest count must be at least 1');
+                return;
+            }
+
+            if (minRating && (minRating < 0 || minRating > 5)) {
+                alert('Rating must be between 0 and 5 stars');
+                return;
+            }
+
+            // Update filter header state
+            updateFilterHeaderState();
+
+            // Check if any filters are active
+            const hasActiveFilter = minPrice || maxPrice || guests || minRating || propertyTypes.length > 0 || amenities.length > 0;
+
+            // Indicate loading state
+            document.getElementById('hotelCount').textContent = hasActiveFilter ? 'Filtering…' : 'Loading…';
+            document.getElementById('hotelList').innerHTML = '<div class="loading">Loading results...</div>';
+
+            // Abort previous in-flight request
+            if (searchAbortController) {
+                searchAbortController.abort();
+            }
+            searchAbortController = new AbortController();
+
+            try {
+                let hotels;
+                if (hasActiveFilter) {
+                    // Call API with filters
+                    hotels = await searchHotelsWithFilters(
+                        currentSearchQuery,
+                        {
+                            minPrice: minPrice || undefined,
+                            maxPrice: maxPrice || undefined,
+                            guests: guests || undefined,
+                            minRating: minRating || undefined,
+                            propertyTypes: propertyTypes.length > 0 ? propertyTypes : undefined,
+                            amenities: amenities.length > 0 ? amenities : undefined,
+                            signal: searchAbortController.signal
+                        }
+                    );
+                } else {
+                    // No filters - get base results
+                    hotels = await searchHotels(currentSearchQuery, { signal: searchAbortController.signal });
+                }
+                
+                currentHotels = hotels;
+                renderResults(hotels);
+                updateApplyButtonVisibility();
+            } catch (error) {
+                if (error?.name === 'AbortError') return;
+                console.error('Error applying filters:', error);
+                document.getElementById('hotelList').innerHTML = '<div class="loading">Error loading results</div>';
+                document.getElementById('hotelCount').textContent = '0 hotels';
+            }
+        }
+
+        // Update Apply button visibility and text
+        function updateApplyButtonVisibility() {
+            const applyBtn = document.querySelector('.filter-apply-btn');
+            const hasActiveFilter = ['price', 'guests', 'rating', 'property', 'amenities'].some(f => isFilterActive(f));
+            
+            if (applyBtn) {
+                if (hasActiveFilter) {
+                    applyBtn.style.display = 'block';
+                    // Calculate count for button text
+                    const hotelCount = currentHotels ? currentHotels.length : 0;
+                    applyBtn.textContent = `Apply Filters (${hotelCount} hotel${hotelCount !== 1 ? 's' : ''})`;
+                } else {
+                    applyBtn.style.display = 'none';
+                }
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+            // Initialize floating filter panel
+            const filtersBtn = document.querySelector('.filters-btn');
+            const overlay = document.querySelector('.filter-panel-overlay');
+            const closeBtn = document.querySelector('.filter-panel-close');
+            
+            // Open panel on button click
+            if (filtersBtn) {
+                filtersBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openFilterPanel();
+                });
+            }
+
+            // Close panel on overlay click (only if clicking the overlay itself, not the panel)
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) {
+                        closeFilterPanel();
+                    }
+                });
+            }
+
+            // Close panel on close button click
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeFilterPanel();
+                });
+            }
+
+            // Add event listeners to all filter inputs for immediate updates
+            const filterInputs = [
+                document.getElementById('minPriceInput'),
+                document.getElementById('maxPriceInput'),
+                document.getElementById('guestsInput'),
+                document.getElementById('minRatingInput')
+            ];
+
+            filterInputs.forEach(input => {
+                if (input) {
+                    input.addEventListener('input', function() {
+                        updateFilterHeaderState();
+                        // Apply filters immediately on every input change
+                        applyFilters();
+                    });
+                }
+            });
+
+            // Add event listeners to property type checkboxes
+            const propertyCheckboxes = [
+                document.getElementById('propertyVilla'),
+                document.getElementById('propertyApartment'),
+                document.getElementById('propertyRoom'),
+                document.getElementById('propertyResort')
+            ];
+
+            propertyCheckboxes.forEach(checkbox => {
+                if (checkbox) {
+                    checkbox.addEventListener('change', function() {
+                        updateFilterHeaderState();
+                        // Apply filters immediately on checkbox change
+                        applyFilters();
+                    });
+                }
+            });
+
+            // Add event listeners to amenities checkboxes
+            const amenitiesCheckboxes = [
+                document.getElementById('amenityWiFi'),
+                document.getElementById('amenityPool'),
+                document.getElementById('amenityBeach'),
+                document.getElementById('amenityAC'),
+                document.getElementById('amenityKitchen')
+            ];
+
+            amenitiesCheckboxes.forEach(checkbox => {
+                if (checkbox) {
+                    checkbox.addEventListener('change', function() {
+                        updateFilterHeaderState();
+                        // Apply filters immediately on checkbox change
+                        applyFilters();
+                    });
+                }
+            });
+
             // Check authentication
             const userEmail = localStorage.getItem('userEmail');
             if (!userEmail) {
@@ -312,8 +1303,11 @@
 
             if (query) {
                 document.getElementById('searchInput').value = query;
+                currentSearchQuery = query;
                 performSearch();
             }
+
+            updateFilterHeaderState();
 
             // Search on Enter
             document.getElementById('searchInput').addEventListener('keypress', function(e) {
@@ -340,8 +1334,33 @@
                 return;
             }
 
+            currentSearchQuery = query;
+            
             // Update URL
             window.history.pushState({}, '', `?q=${encodeURIComponent(query)}`);
+
+            // Clear filter inputs when performing new search
+            document.getElementById('minPriceInput').value = '';
+            document.getElementById('maxPriceInput').value = '';
+            document.getElementById('guestsInput').value = '';
+            document.getElementById('minRatingInput').value = '';
+            document.getElementById('propertyVilla').checked = false;
+            document.getElementById('propertyApartment').checked = false;
+            document.getElementById('propertyRoom').checked = false;
+            document.getElementById('propertyResort').checked = false;
+            document.getElementById('amenityWiFi').checked = false;
+            document.getElementById('amenityPool').checked = false;
+            document.getElementById('amenityBeach').checked = false;
+            document.getElementById('amenityAC').checked = false;
+            document.getElementById('amenityKitchen').checked = false;
+            selectedFilters.clear();
+            expandedFilter = null;
+            const headers = document.querySelectorAll('.filter-section-header');
+            headers.forEach(h => h.classList.remove('selected'));
+            const contents = document.querySelectorAll('.filter-section-content');
+            contents.forEach(c => c.classList.remove('expanded'));
+            updateFilterHeaderState();
+            updateApplyButtonVisibility();
 
             // Indicate loading state
             document.getElementById('hotelCount').textContent = 'Loading…';
@@ -365,29 +1384,154 @@
             }
         }
 
-        function renderResults(hotels) {
-            document.getElementById('hotelCount').textContent = `${hotels.length} hotel${hotels.length !== 1 ? 's' : ''} found`;
+        async function applyPriceFilter() {
+            await applyFilters();
+            closeFilterPanel();
+        }
 
+        async function clearPriceFilter() {
+            // Clear all filter inputs
+            document.getElementById('minPriceInput').value = '';
+            document.getElementById('maxPriceInput').value = '';
+            document.getElementById('guestsInput').value = '';
+            document.getElementById('minRatingInput').value = '';
+            document.getElementById('propertyVilla').checked = false;
+            document.getElementById('propertyApartment').checked = false;
+            document.getElementById('propertyRoom').checked = false;
+            document.getElementById('propertyResort').checked = false;
+            document.getElementById('amenityWiFi').checked = false;
+            document.getElementById('amenityPool').checked = false;
+            document.getElementById('amenityBeach').checked = false;
+            document.getElementById('amenityAC').checked = false;
+            document.getElementById('amenityKitchen').checked = false;
+            
+            // Reset filter UI state
+            selectedFilters.clear();
+            expandedFilter = null;
+            const headers = document.querySelectorAll('.filter-section-header');
+            headers.forEach(h => h.classList.remove('selected'));
+            const contents = document.querySelectorAll('.filter-section-content');
+            contents.forEach(c => c.classList.remove('expanded'));
+            
+            updateFilterHeaderState();
+            
+            // Apply filters (which will fetch unfiltered results since all filters are cleared)
+            await applyFilters();
+            closeFilterPanel();
+        }
+
+        function renderMapPins(hotels) {
             // Clear previous markers
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
 
-            if (hotels.length === 0) {
-                document.getElementById('hotelList').innerHTML = '<div class="loading">No hotels found</div>';
+            const count = hotels.length;
+            if (count === 0) {
                 return;
             }
 
-            // Add markers to map
             const bounds = L.latLngBounds();
+            const priceActive = isFilterActive('price');
+            const ratingActive = isFilterActive('rating');
+            const guestsActive = isFilterActive('guests');
+            const propertyActive = isFilterActive('property');
+            const amenitiesActive = isFilterActive('amenities');
+            const hasActiveFilters = priceActive || ratingActive || guestsActive || propertyActive || amenitiesActive;
+
+            const selectedAmenities = amenitiesActive ? getSelectedAmenities() : [];
+            let amenitiesSummary = '';
+            if (selectedAmenities.length > 0) {
+                if (selectedAmenities.length <= 2) {
+                    amenitiesSummary = selectedAmenities.join(' / ');
+                } else {
+                    amenitiesSummary = `${selectedAmenities.slice(0, 2).join(' / ')} +${selectedAmenities.length - 2}`;
+                }
+            }
+
+            const icons = {
+                mapPin: `<svg viewBox="0 0 24 24" fill="rgba(217, 4, 41, 0.12)" stroke="#d90429" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-4.35 7-11a7 7 0 0 0-14 0c0 6.65 7 11 7 11Z"/><circle cx="12" cy="10" r="3"/></svg>`,
+                price: `<svg viewBox="0 0 24 24" fill="rgba(217, 4, 41, 0.12)" stroke="#d90429" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"/><path d="M6 8h12"/><path d="M9 3v5"/><path d="M9 8c0 4 3 4 3 4s3 0 3 4-3 4-3 4-3 0-3-4"/><path d="M15 8v13"/></svg>`,
+                rating: `<svg viewBox="0 0 24 24" fill="rgba(217, 4, 41, 0.12)" stroke="#d90429" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+                guests: `<svg viewBox="0 0 24 24" fill="rgba(217, 4, 41, 0.12)" stroke="#d90429" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 11a4 4 0 1 0-8 0"/><path d="M6 21v-1a6 6 0 0 1 12 0v1"/><circle cx="12" cy="7" r="4"/></svg>`,
+                property: `<svg viewBox="0 0 24 24" fill="rgba(217, 4, 41, 0.12)" stroke="#d90429" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+                amenities: `<svg viewBox="0 0 24 24" fill="rgba(217, 4, 41, 0.12)" stroke="#d90429" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`
+            };
+
             hotels.forEach(hotel => {
+                let markerHtml = '';
+
+                if (!hasActiveFilters) {
+                    // Simple branded location pins (no filter info)
+                    markerHtml = `
+                        <div class="custom-marker simple" data-hotel-id="${hotel.id}">
+                            <span class="custom-marker-pin">${icons.mapPin}</span>
+                        </div>
+                    `;
+                } else {
+                    const parts = [];
+                    if (priceActive) {
+                        // Map pin: icon only, no price text
+                        parts.push(`<span class="marker-icon">${icons.price}</span>`);
+                    }
+                    if (ratingActive) {
+                        const ratingValue = (hotel.rating ?? 0).toFixed(1);
+                        parts.push(`<span class="marker-part"><span class="marker-icon">${icons.rating}</span><span class="marker-text">${ratingValue}</span></span>`);
+                    }
+                    if (guestsActive) {
+                        const guestsValue = hotel.guests ?? 0;
+                        parts.push(`<span class="marker-part"><span class="marker-icon">${icons.guests}</span><span class="marker-text">${guestsValue}</span></span>`);
+                    }
+                    if (propertyActive) {
+                        // Show property type icon only
+                        parts.push(`<span class="marker-icon">${icons.property}</span>`);
+                    }
+                    if (amenitiesActive && amenitiesSummary) {
+                        parts.push(`<span class="marker-part marker-amenities"><span class="marker-icon">${icons.amenities}</span><span class="marker-text">${amenitiesSummary}</span></span>`);
+                    }
+
+                    markerHtml = `
+                        <div class="custom-marker" data-hotel-id="${hotel.id}">
+                            <div class="custom-marker-content">
+                                ${parts.join('<span class="marker-sep">·</span>')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Create custom divIcon
+                const customIcon = L.divIcon({
+                    html: markerHtml,
+                    className: 'custom-marker-wrapper',
+                    iconSize: null, // Auto size based on content
+                    iconAnchor: hasActiveFilters ? [55, 52] : [16, 30], // Center bottom of marker
+                });
+
                 const popupHtml = buildPopupContent(hotel);
-                const marker = L.marker([hotel.latitude, hotel.longitude])
+                const marker = L.marker([hotel.latitude, hotel.longitude], { icon: customIcon })
                     .addTo(map)
                     .bindPopup(popupHtml, { closeButton: true, maxWidth: 260 });
 
                 marker.hotelId = hotel.id;
                 marker.on('click', function() {
                     highlightHotel(hotel.id);
+                });
+
+                // Fix state reset bug: when popup closes, remove active class and restore default pin
+                marker.on('popupclose', function() {
+                    if (currentHotelId === hotel.id) {
+                        currentHotelId = null;
+                        const listItem = document.getElementById(`listitem-${hotel.id}`);
+                        if (listItem) {
+                            listItem.classList.remove('active');
+                        }
+                        const markerElement = marker.getElement();
+                        if (markerElement) {
+                            const markerDiv = markerElement.querySelector('.custom-marker');
+                            if (markerDiv) {
+                                markerDiv.classList.remove('active');
+                            }
+                        }
+                    }
                 });
 
                 markers.push(marker);
@@ -397,6 +1541,21 @@
             // Fit map to bounds
             if (bounds.isValid()) {
                 map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        function renderResults(hotels) {
+            // ALWAYS show count, even if 0 - this is the single source of truth
+            const count = hotels.length;
+            document.getElementById('hotelCount').textContent = `${count} hotel${count !== 1 ? 's' : ''} found`;
+
+            renderMapPins(hotels);
+
+            // Handle empty results - clear list and map, but count is already shown above
+            if (count === 0) {
+                document.getElementById('hotelList').innerHTML = '<div class="loading">No hotels found</div>';
+                // Count is already displayed - do NOT hide it
+                return;
             }
 
             // Render list
@@ -419,12 +1578,15 @@
             const price = `₹${(Math.round(hotel.price)).toLocaleString('en-IN')}`;
             const rating = hotel.rating ? hotel.rating.toFixed(2) : 'N/A';
             const location = [hotel.city, hotel.country].filter(Boolean).join(', ');
+            const roomType = hotel.room_type ? `<div class="popup-card-meta">🛏️ ${hotel.room_type}</div>` : '';
+            
             return `
                 <a class="popup-card" href="hotel-details.html?id=${hotel.id}">
                     <img src="${hotel.image_url}" alt="${hotel.name}" loading="lazy" />
                     <div class="popup-card-body">
                         <div class="popup-card-title">${hotel.name}</div>
-                        <div class="popup-card-meta">${location}</div>
+                        <div class="popup-card-meta">📍 ${location}</div>
+                        ${roomType}
                         <div class="popup-card-price">${price} / night</div>
                         <div class="popup-card-rating">★ ${rating}</div>
                     </div>
@@ -433,12 +1595,24 @@
         }
 
         function highlightHotel(hotelId) {
-            // Remove previous highlight
+            // Remove previous highlight from list
             if (currentHotelId) {
                 document.getElementById(`listitem-${currentHotelId}`)?.classList.remove('active');
+                
+                // Remove active class from previous marker
+                const prevMarker = markers.find(m => m.hotelId === currentHotelId);
+                if (prevMarker) {
+                    const prevMarkerElement = prevMarker.getElement();
+                    if (prevMarkerElement) {
+                        const prevMarkerDiv = prevMarkerElement.querySelector('.custom-marker');
+                        if (prevMarkerDiv) {
+                            prevMarkerDiv.classList.remove('active');
+                        }
+                    }
+                }
             }
 
-            // Highlight new hotel
+            // Highlight new hotel in list
             currentHotelId = hotelId;
             const listItem = document.getElementById(`listitem-${hotelId}`);
             if (listItem) {
@@ -446,11 +1620,20 @@
                 listItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
 
-            // Find and open marker popup
+            // Find and highlight marker, open popup
             const hotel = currentHotels.find(h => h.id === hotelId);
             if (hotel) {
                 const marker = markers.find(m => m.hotelId === hotelId);
                 if (marker) {
+                    // Add active class to marker
+                    const markerElement = marker.getElement();
+                    if (markerElement) {
+                        const markerDiv = markerElement.querySelector('.custom-marker');
+                        if (markerDiv) {
+                            markerDiv.classList.add('active');
+                        }
+                    }
+                    
                     marker.openPopup();
                     map.setView([hotel.latitude, hotel.longitude], 13);
                 }
@@ -471,6 +1654,12 @@
         window.logout = logout;
         window.highlightHotel = highlightHotel;
         window.performSearch = performSearch;
+        window.applyPriceFilter = applyPriceFilter;
+        window.clearPriceFilter = clearPriceFilter;
+        window.openFilterPanel = openFilterPanel;
+        window.closeFilterPanel = closeFilterPanel;
+        window.toggleFilterSection = toggleFilterSection;
     </script>
+
 </body>
 </html>

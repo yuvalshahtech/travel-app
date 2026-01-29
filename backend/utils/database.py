@@ -54,11 +54,29 @@ def init_database():
             price REAL NOT NULL,
             room_type TEXT NOT NULL,
             rating REAL DEFAULT 4.5,
+            guests INTEGER DEFAULT 2,
             description TEXT,
             image_url TEXT,
+            amenities TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Add guests column to existing tables (for backwards compatibility)
+    try:
+        cursor.execute("ALTER TABLE hotels ADD COLUMN guests INTEGER DEFAULT 2")
+        conn.commit()
+    except sqlite3.OperationalError:
+        # Column already exists, skip
+        pass
+    
+    # Add amenities column to existing tables (for backwards compatibility)
+    try:
+        cursor.execute("ALTER TABLE hotels ADD COLUMN amenities TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        # Column already exists, skip
+        pass
     
     conn.commit()
     conn.close()
@@ -149,14 +167,21 @@ def email_verification_exists(email):
     conn.close()
     return exists
 # Hotel-related functions
-def create_hotel(name, city, country, latitude, longitude, price, room_type, rating=4.5, description=None, image_url=None):
-    """Create a new hotel"""
+def create_hotel(name, city, country, latitude, longitude, price, room_type, rating=4.5, guests=2, description=None, image_url=None, amenities=None):
+    """Create a new hotel with guest capacity and amenities"""
+    import json
+    
+    # Convert amenities list to JSON string
+    amenities_json = None
+    if amenities:
+        amenities_json = json.dumps(amenities)
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO hotels (name, city, country, latitude, longitude, price, room_type, rating, description, image_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (name, city, country, latitude, longitude, price, room_type, rating, description, image_url))
+        INSERT INTO hotels (name, city, country, latitude, longitude, price, room_type, rating, guests, description, image_url, amenities)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (name, city, country, latitude, longitude, price, room_type, rating, guests, description, image_url, amenities_json))
     conn.commit()
     hotel_id = cursor.lastrowid
     conn.close()
@@ -205,4 +230,92 @@ def search_hotels(query, limit=50):
     """, (search_term, search_term, search_term, limit))
     hotels = cursor.fetchall()
     conn.close()
+    return hotels
+
+def search_hotels_with_filters(query, limit=50, min_price=None, max_price=None, guests=None, min_rating=None, property_types=None, amenities=None):
+    """
+    Search hotels by name, city, or country with optional filters.
+    
+    Args:
+        query: Search term (required)
+        limit: Maximum results to return (default 50)
+        min_price: Minimum price filter in INR (optional, None = no minimum)
+        max_price: Maximum price filter in INR (optional, None = no maximum)
+        guests: Minimum guest capacity (optional, None = no filter)
+        min_rating: Minimum rating filter (0-5 stars) (optional, None = no filter)
+        property_types: List of property types to filter by (optional, matches against room_type field)
+        amenities: List of amenities to filter by (optional, matches against amenities JSON field)
+    
+    Returns:
+        List of hotel records matching search and filter criteria
+    """
+    import json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    search_term = f"%{query}%"
+    
+    # Build WHERE clause dynamically for extensibility
+    where_clauses = [
+        "(name LIKE ? OR city LIKE ? OR country LIKE ?)"
+    ]
+    params = [search_term, search_term, search_term]
+    
+    # Add price filtering if provided
+    if min_price is not None:
+        where_clauses.append("price >= ?")
+        params.append(min_price)
+    
+    if max_price is not None:
+        where_clauses.append("price <= ?")
+        params.append(max_price)
+    
+    # Add guest capacity filtering if provided
+    if guests is not None:
+        where_clauses.append("guests >= ?")
+        params.append(guests)
+    
+    # Add rating filtering if provided
+    if min_rating is not None:
+        where_clauses.append("rating >= ?")
+        params.append(min_rating)
+    
+    # Add property type filtering if provided (match against room_type field)
+    if property_types is not None and len(property_types) > 0:
+        # Use OR logic to match any of the selected property types
+        # Match: "Entire villa" contains "Villa", "Private room" contains "Room", etc.
+        property_conditions = []
+        for prop_type in property_types:
+            property_conditions.append("room_type LIKE ?")
+            params.append(f"%{prop_type}%")
+        where_clauses.append(f"({' OR '.join(property_conditions)})")
+    
+    # Construct final query
+    where_clause = " AND ".join(where_clauses)
+    query_str = f"""
+        SELECT * FROM hotels 
+        WHERE {where_clause}
+        ORDER BY created_at DESC LIMIT ?
+    """
+    params.append(limit)
+    
+    cursor.execute(query_str, params)
+    hotels = cursor.fetchall()
+    conn.close()
+    
+    # Post-filter by amenities (AND logic - hotel must have ALL selected amenities)
+    if amenities is not None and len(amenities) > 0:
+        filtered_hotels = []
+        for hotel in hotels:
+            hotel_amenities = []
+            if hotel["amenities"]:
+                try:
+                    hotel_amenities = json.loads(hotel["amenities"])
+                except:
+                    hotel_amenities = []
+            
+            # Check if hotel has all required amenities
+            if all(amenity in hotel_amenities for amenity in amenities):
+                filtered_hotels.append(hotel)
+        return filtered_hotels
+    
     return hotels

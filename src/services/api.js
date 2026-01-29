@@ -1,44 +1,116 @@
 // Frontend API service for Travel Explorer
-// Centralizes fetch logic with timeouts, abort support, caching, and validation
-// Version: 1.1 - Updated to use backend:8000 directly
+// Vanilla JavaScript fetch wrapper for backend endpoints
 
-const DEFAULT_TIMEOUT_MS = 12000;
-const CACHE_TTL_MS = 30000; // 30s cache for non-search endpoints
+const API_BASE = 'http://localhost:8000';
 
-const cache = new Map();
-
-function getBaseUrl() {
-  // When served from port 3000 (Python http.server), point to backend on 8000
-  // Backend must have CORS enabled
-  return 'http://localhost:8000';
-}
-
-function makeCacheKey(path) {
-  return path;
-}
-
-function setCache(key, data) {
-  cache.set(key, { data, ts: Date.now() });
-}
-
-function getCache(key) {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL_MS) {
-    cache.delete(key);
-    return null;
+/**
+ * Fetch recent hotels (limited set for homepage)
+ */
+export async function getRecentHotels() {
+  try {
+    const response = await fetch(`${API_BASE}/hotels/recent`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data.map(normalizeHotel) : [];
+  } catch (error) {
+    console.error('Error fetching recent hotels:', error);
+    return [];
   }
-  return entry.data;
 }
 
+/**
+ * Fetch hotels by city
+ */
+export async function getHotelsByCity(city) {
+  try {
+    const response = await fetch(`${API_BASE}/hotels/city/${encodeURIComponent(city)}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data.map(normalizeHotel) : [];
+  } catch (error) {
+    console.error(`Error fetching hotels for city "${city}":`, error);
+    return [];
+  }
+}
+
+/**
+ * Search hotels by query string
+ */
+export async function searchHotels(query) {
+  try {
+    const response = await fetch(`${API_BASE}/hotels/search?q=${encodeURIComponent(query)}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data.map(normalizeHotel) : [];
+  } catch (error) {
+    console.error('Error searching hotels:', error);
+    throw error;
+  }
+}
+
+/**
+ * Search hotels with filters
+ */
+export async function searchHotelsWithFilters(query, filters) {
+  try {
+    let url = `${API_BASE}/hotels/search?q=${encodeURIComponent(query)}`;
+    
+    if (filters.minPrice !== undefined && filters.minPrice !== '') {
+      url += `&min_price=${parseFloat(filters.minPrice)}`;
+    }
+    if (filters.maxPrice !== undefined && filters.maxPrice !== '') {
+      url += `&max_price=${parseFloat(filters.maxPrice)}`;
+    }
+    if (filters.guests !== undefined && filters.guests !== '') {
+      url += `&guests=${parseInt(filters.guests)}`;
+    }
+    if (filters.minRating !== undefined && filters.minRating !== '') {
+      url += `&min_rating=${parseFloat(filters.minRating)}`;
+    }
+    if (filters.propertyTypes !== undefined && Array.isArray(filters.propertyTypes) && filters.propertyTypes.length > 0) {
+      // Send as comma-separated list
+      url += `&property_types=${filters.propertyTypes.join(',')}`;
+    }
+    if (filters.amenities !== undefined && Array.isArray(filters.amenities) && filters.amenities.length > 0) {
+      // Send as comma-separated list
+      url += `&amenities=${filters.amenities.join(',')}`;
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data.map(normalizeHotel) : [];
+  } catch (error) {
+    console.error('Error applying filters:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get single hotel by ID
+ */
+export async function getHotelById(hotelId) {
+  try {
+    const response = await fetch(`${API_BASE}/hotels/${hotelId}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return normalizeHotel(data);
+  } catch (error) {
+    console.error(`Error fetching hotel ${hotelId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Normalize hotel data from backend
+ */
 function normalizeHotel(raw) {
-  // Basic shape enforcement and type normalization
-  const backendUrl = 'http://localhost:8000';
+  // Convert relative image paths to absolute backend URLs
   let imageUrl = raw.image_url || 'https://via.placeholder.com/400x300?text=Hotel';
   
-  // Convert relative /uploads paths to absolute backend URLs
-  if (imageUrl.startsWith('/uploads/')) {
-    imageUrl = backendUrl + imageUrl;
+  // If image_url is a relative path (starts with /), prepend backend URL
+  if (imageUrl.startsWith('/')) {
+    imageUrl = `${API_BASE}${imageUrl}`;
   }
   
   return {
@@ -48,67 +120,11 @@ function normalizeHotel(raw) {
     country: String(raw.country ?? ''),
     price: Number(raw.price ?? 0),
     rating: Number(raw.rating ?? 0),
+    guests: Number(raw.guests ?? 2),
     image_url: imageUrl,
-    latitude: raw.latitude != null ? Number(raw.latitude) : raw.latitude,
-    longitude: raw.longitude != null ? Number(raw.longitude) : raw.longitude,
-    description: raw.description ?? undefined,
-    room_type: raw.room_type ?? undefined,
+    latitude: raw.latitude != null ? Number(raw.latitude) : null,
+    longitude: raw.longitude != null ? Number(raw.longitude) : null,
+    description: raw.description ?? '',
+    room_type: raw.room_type ?? '',
   };
-}
-
-async function request(path, { signal, timeoutMs = DEFAULT_TIMEOUT_MS, cacheable = false } = {}) {
-  const base = getBaseUrl();
-  const url = base + path;
-
-  const cacheKey = cacheable ? makeCacheKey(url) : null;
-  if (cacheable) {
-    const cached = getCache(cacheKey);
-    if (cached) return cached;
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  // If caller provides a signal, tie them together
-  const compositeSignal = signal ? mergeSignals(signal, controller.signal) : controller.signal;
-
-  try {
-    const resp = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: compositeSignal });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-    if (cacheable && cacheKey) setCache(cacheKey, data);
-    return data;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-// Utility to merge two AbortSignals (abort if either aborts)
-function mergeSignals(a, b) {
-  const ctrl = new AbortController();
-  const onAbort = () => ctrl.abort();
-  if (a) a.addEventListener('abort', onAbort);
-  if (b) b.addEventListener('abort', onAbort);
-  return ctrl.signal;
-}
-
-export async function getRecentHotels(options) {
-  const data = await request('/hotels/recent', { cacheable: true, ...(options || {}) });
-  return Array.isArray(data) ? data.map(normalizeHotel) : [];
-}
-
-export async function getHotelsByCity(city, options) {
-  const data = await request(`/hotels/city/${encodeURIComponent(city)}`, { cacheable: true, ...(options || {}) });
-  return Array.isArray(data) ? data.map(normalizeHotel) : [];
-}
-
-export async function searchHotels(query, options) {
-  const data = await request(`/hotels/search?q=${encodeURIComponent(query)}`, { cacheable: false, ...(options || {}) });
-  return Array.isArray(data) ? data.map(normalizeHotel) : [];
-}
-
-export async function getHotelById(id, options) {
-  const data = await request(`/hotels/${id}`, { cacheable: true, ...(options || {}) });
-  // Endpoint returns a single hotel object
-  return normalizeHotel(data);
 }
