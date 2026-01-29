@@ -1,92 +1,139 @@
-# Authentication API (FastAPI + Brevo OTP)
+# Travel App – Hotel Booking & Analytics
 
-Production-ready email OTP signup flow with FastAPI backend and simple HTML frontend.
+A hotel search and discovery app with map-based browsing, multi-filter search, and basic authentication. Built with a FastAPI backend and a vanilla HTML/JS frontend to demonstrate hotel discovery, filtering, and location-based UX.
 
 ## Project Structure
 
 ```
 Travel-App/
 ├─ backend/
-│  ├─ main.py              # FastAPI app entry
-│  ├─ requirements.txt     # Python deps
-│  ├─ routes/auth.py       # /signup, /verify-otp, /login
-│  └─ utils/               # auth, database, otp, email
-└─ src/
-   ├─ signup.html          # Signup + OTP form
-   ├─ login.html           # Login
-   └─ dashboard.html       # Placeholder
+│  ├─ main.py              # FastAPI app
+│  ├─ requirements.txt     # Python dependencies
+│  ├─ models/              # Pydantic models
+│  ├─ routes/              # API routes (auth, hotels)
+│  ├─ schemas/             # Request/response schemas
+│  ├─ utils/               # Auth, database, email utilities
+│  ├─ load_hotels.py       # Sample data seeder
+│  └─ uploads/             # Hotel images used by sample data
+│
+├─ src/
+│  ├─ login.html           # Email/password login page
+│  ├─ signup.html          # User registration page
+│  ├─ home.html            # Featured hotels grid (dashboard)
+│  ├─ search.html          # Hotel search with map and filters
+│  ├─ hotel-details.html   # Individual hotel details page
+│  ├─ dashboard.html       # Post-login welcome page
+│  └─ services/
+│     └─ api.js            # API fetch wrapper (ES module)
+│
+├─ .env                    # Environment variables (email service config)
+└─ README.md
 ```
 
-## Quick Start (Windows + PowerShell)
+## Tech Stack
 
-1) Install dependencies
-```
+- **Backend:** Python, FastAPI, SQLite, Uvicorn
+- **Frontend:** Vanilla HTML/CSS/JavaScript
+- **Maps:** Leaflet.js
+- **Icons:** Lucide (CDN)
+
+## Installation
+
+### Backend (Python)
+
+```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-2) Configure environment variables (root .env or session)
-- Create `.env` in project root (Travel-App/.env):
+Create `.env` in project root:
+
 ```
 BREVO_API_KEY=xkeysib-your-api-key
 SENDER_EMAIL=your-verified-sender@example.com
-SENDER_NAME=Travel App
 DEV_MODE=false
 ```
-  or set for current session:
-```
-$env:BREVO_API_KEY="xkeysib-your-api-key"
-$env:SENDER_EMAIL="your-verified-sender@example.com"
-$env:SENDER_NAME="Travel App"
-$env:DEV_MODE="false"
-```
 
-3) Verify env vars are visible to Python
-```
-cd backend
-python -c "import os;print('BREVO_API_KEY:', 'SET' if os.getenv('BREVO_API_KEY') else 'NOT SET');print('SENDER_EMAIL:', os.getenv('SENDER_EMAIL','NOT SET'))"
-```
+### Frontend (Node/JS – optional)
 
-4) Start the API server
-```
-cd backend
-python main.py
-# or
-uvicorn backend.main:app --reload
-```
-Runs at http://localhost:8000
+You can run the frontend with Python’s built-in server or a Node static server.
 
-5) Test signup (no frontend)
-```
-$body = @{ email = "test@example.com"; password = "Pass123!" } | ConvertTo-Json
-curl -X POST http://localhost:8000/signup -H "Content-Type: application/json" -d $body
-```
-Expected (success): `{ "message": "Signup prepared. Check your email for OTP.", "email": "..." }`
+**Option A: Python server**
 
-## OTP & Email Flow (High Level)
-- User submits email + password to `/signup`.
-- Backend generates a 6‑digit OTP, stores a pending record, and emails the OTP via Brevo.
-- User calls `/verify-otp` with the code to create the account.
-- OTP expires in 10 minutes. OTP is never returned by the API.
-- If email sending fails, the API returns a clean error (HTTP 503).
-
-## Environment Variables
-- `BREVO_API_KEY` (required): Brevo transactional API key (starts with `xkeysib-`).
-- `SENDER_EMAIL` (required): Must be verified in Brevo dashboard (Settings → Senders).
-- `SENDER_NAME` (optional): Friendly sender name. Default: "Travel App".
-- `DEV_MODE` (optional): `true/1/yes` logs OTP on failure for local debugging.
-
-## Common Blockers (Fix First)
-- Sender not verified in Brevo → Verify at https://app.brevo.com/settings/senders.
-- Env vars not loaded → Ensure they show as SET via the Python check above.
-- 401 from Brevo → Wrong/expired `BREVO_API_KEY`.
-
-## Minimal Frontend (optional)
-Serve static files to use the HTML pages:
-```
+```bash
 cd src
 python -m http.server 3000
 ```
-Open: http://localhost:3000/signup.html
 
-That’s it. You can sign up, receive the OTP by email, verify, and log in.
+**Option B: Node static server**
+
+```bash
+npm install -g http-server
+cd src
+http-server -p 3000
+```
+
+## Run Locally
+
+1. Initialize the database (auto-creates tables):
+
+```bash
+cd backend
+python load_hotels.py
+```
+
+2. Start backend API:
+
+```bash
+cd backend
+uvicorn main:app --reload --port 8000
+```
+
+3. Start frontend (choose one):
+
+```bash
+cd src
+python -m http.server 3000
+```
+
+Open http://localhost:3000 and start from `home.html`.
+
+## Usage
+
+### Filters
+
+On the search page, filters apply instantly and use AND logic:
+
+- **Price** (min/max)
+- **Guests** (minimum capacity)
+- **Property Type** (room_type)
+- **Amenities** (Wi-Fi, Pool, Beach access, AC, Kitchen)
+
+Selecting multiple amenities requires each hotel to include **all** selected amenities.
+
+### Map Pins
+
+- **No filters active:** branded browse pin
+- **Filters active:** pin shows summary info (price/guests/property + amenities badge)
+- **Hover/Active states:** maintain brand color, scale, and shadow
+- **Zero results:** pins disappear and count shows 0
+
+## Database Seeding
+
+Run `backend/load_hotels.py` to create and seed the SQLite database (`backend/auth.db`) with sample hotels and amenities.
+
+## API Overview
+
+- `GET /hotels/search?q=city` – search hotels
+- `GET /hotels/search?q=city&min_price=X&max_price=Y&guests=Z&min_rating=R&property_types=A,B&amenities=Wi-Fi,Pool` – search with filters
+- `GET /hotels/{id}` – hotel details
+
+All responses return `amenities` as an array for UI rendering.
+
+## Screenshot
+
+_Add screenshots of the search page, filters, and map pins here._
+
+## License
+
+_Add license information here._

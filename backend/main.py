@@ -19,24 +19,30 @@ logging.basicConfig(
 # Initialize FastAPI app
 app = FastAPI(title="Authentication API", version="1.0.0")
 
-# Configure CORS
+# Mount static files directory BEFORE CORS middleware
+# This ensures static file routes exist before CORS processing
+uploads_dir = Path(__file__).parent / "uploads"
+if uploads_dir.exists():
+    app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+
+# Configure CORS - must be after mounts but before routes
+# Development configuration: allows requests from frontend on different port
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[
+        "http://localhost:3000",  # Frontend dev server
+        "http://127.0.0.1:3000",  # Alternative localhost
+    ],
+    allow_credentials=True,  # Allow cookies/auth headers
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],  # Expose all response headers to frontend
 )
 
 # Initialize database on startup
 @app.on_event("startup")
 async def startup_event():
     init_database()
-
-# Mount static files directory for uploads
-uploads_dir = Path(__file__).parent / "uploads"
-if uploads_dir.exists():
-    app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 # Include routers
 app.include_router(auth_router)

@@ -12,6 +12,33 @@ import sqlite3
 def load_sample_data():
     """Load realistic Airbnb-style hotel data"""
     
+    # Helper function to assign amenities based on hotel characteristics
+    def assign_amenities(hotel):
+        """Assign amenities logically based on price, rating, room_type, and description"""
+        amenities = []
+        
+        # Wi-Fi is common in most places
+        if hotel['price'] >= 2500:
+            amenities.append('Wi-Fi')
+        
+        # Pool for high-end properties
+        if hotel['price'] >= 5000 or hotel['rating'] >= 4.8:
+            amenities.append('Pool')
+        
+        # Beach access for beachfront properties
+        if 'beach' in hotel['description'].lower() or 'beachfront' in hotel['name'].lower():
+            amenities.append('Beach access')
+        
+        # AC for most modern properties
+        if hotel['price'] >= 3000 or 'modern' in hotel['description'].lower() or 'apartment' in hotel['room_type'].lower():
+            amenities.append('AC')
+        
+        # Kitchen for villas, apartments, and high-end properties
+        if 'villa' in hotel['room_type'].lower() or 'apartment' in hotel['room_type'].lower() or hotel['price'] >= 6000:
+            amenities.append('Kitchen')
+        
+        return amenities
+    
     # Sample hotels with realistic prices, locations, and ratings
     hotels = [
         # Mumbai (Accurate real-world coordinates)
@@ -24,6 +51,7 @@ def load_sample_data():
             "price": 7000,
             "room_type": "Entire villa",
             "rating": 4.92,
+            "guests": 6,
             "description": "Stunning beachfront villa with private pool and ocean views. Located in Bandra, walking distance to restaurants and nightlife.",
             "image_url": "/uploads/hotels/hotel1.jpg"
         },
@@ -36,6 +64,7 @@ def load_sample_data():
             "price": 4800,
             "room_type": "Entire apartment",
             "rating": 4.75,
+            "guests": 4,
             "description": "Spacious 2-bedroom apartment in heart of Mumbai. Close to metro, restaurants, and shopping malls. Perfect for families.",
             "image_url": "/uploads/hotels/hotel2.jpg"
         },
@@ -48,6 +77,7 @@ def load_sample_data():
             "price": 3700,
             "room_type": "Studio",
             "rating": 4.68,
+            "guests": 2,
             "description": "Charming studio apartment with modern amenities. Walking distance to cafes, shops, and parks. Great location!",
             "image_url": "/uploads/hotels/hotel3.jpg"
         },
@@ -60,6 +90,7 @@ def load_sample_data():
             "price": 3000,
             "room_type": "Private room",
             "rating": 4.60,
+            "guests": 2,
             "description": "Traditional heritage room in restored haveli. Experience authentic Mumbai with modern comfort.",
             "image_url": "/uploads/hotels/hotel4.jpg"
         },
@@ -73,6 +104,7 @@ def load_sample_data():
             "price": 4200,
             "room_type": "Entire cottage",
             "rating": 4.84,
+            "guests": 3,
             "description": "Charming beachfront cottage steps away from Anjuna Beach. Perfect for relaxation with sea breeze and sunset views.",
             "image_url": "/uploads/hotels/hotel5.jpg"
         },
@@ -85,6 +117,7 @@ def load_sample_data():
             "price": 7200,
             "room_type": "Entire villa",
             "rating": 4.89,
+            "guests": 8,
             "description": "5-star resort experience with pool, spa, and restaurant. Private beach access. Pure luxury!",
             "image_url": "/uploads/hotels/hotel6.jpg"
         },
@@ -97,6 +130,7 @@ def load_sample_data():
             "price": 2300,
             "room_type": "Shared dorm",
             "rating": 4.45,
+            "guests": 1,
             "description": "Social hostel perfect for backpackers. Meet travelers, explore Goa together. Kitchen and lounge available.",
             "image_url": "/uploads/hotels/hotel7.jpg"
         },
@@ -110,6 +144,7 @@ def load_sample_data():
             "price": 3200,
             "room_type": "Private room",
             "rating": 4.71,
+            "guests": 2,
             "description": "Authentic stay in historic Old Delhi. Experience traditional hospitality with modern comfort. Walking tours available.",
             "image_url": "/uploads/hotels/hotel8.jpg"
         },
@@ -122,6 +157,7 @@ def load_sample_data():
             "price": 6500,
             "room_type": "Entire villa",
             "rating": 4.80,
+            "guests": 10,
             "description": "Spacious farmhouse on the outskirts. Peaceful location with gardens, perfect for families and groups.",
             "image_url": "/uploads/hotels/hotel9.jpg"
         },
@@ -134,6 +170,7 @@ def load_sample_data():
             "price": 4600,
             "room_type": "Entire apartment",
             "rating": 4.65,
+            "guests": 3,
             "description": "Convenient 1-bedroom apartment in central location. Perfect for business travelers. WiFi, AC, and kitchen included.",
             "image_url": "/uploads/hotels/hotel10.jpg"
         },
@@ -147,6 +184,7 @@ def load_sample_data():
             "price": 4200,
             "room_type": "Entire apartment",
             "rating": 4.73,
+            "guests": 4,
             "description": "Modern apartment in IT Hub. Close to tech parks, malls, and nightlife. Fully furnished and equipped.",
             "image_url": "/uploads/hotels/hotel11.jpg"
         },
@@ -159,6 +197,7 @@ def load_sample_data():
             "price": 5900,
             "room_type": "Entire villa",
             "rating": 4.88,
+            "guests": 6,
             "description": "Spacious villa with garden, perfect for nature lovers. Quiet neighborhood with modern amenities.",
             "image_url": "/uploads/hotels/hotel12.jpg"
         },
@@ -172,6 +211,7 @@ def load_sample_data():
             "price": 3300,
             "room_type": "Private room",
             "rating": 4.76,
+            "guests": 2,
             "description": "Historic colonial mansion with period furnishings. Experience old-world charm and hospitality. Literary hub!",
             "image_url": "/uploads/hotels/hotel13.jpg"
         },
@@ -185,6 +225,7 @@ def load_sample_data():
             "price": 5000,
             "room_type": "Entire apartment",
             "rating": 4.81,
+            "guests": 4,
             "description": "Room with views of City Palace. Walking distance to bazaars and main attractions. Royal experience!",
             "image_url": "/uploads/hotels/hotel14.jpg"
         },
@@ -198,6 +239,7 @@ def load_sample_data():
             "price": 7400,
             "room_type": "Entire villa",
             "rating": 4.93,
+            "guests": 8,
             "description": "Stunning lakeside villa with boat access. Romantic getaway with sunset views over Lake Pichola.",
             "image_url": "/uploads/hotels/hotel15.jpg"
         },
@@ -207,6 +249,7 @@ def load_sample_data():
     # This ensures each hotel uses a unique local image uploaded to backend/uploads/hotels
     for idx, h in enumerate(hotels, start=1):
         h['image_url'] = f"/uploads/hotels/hotel{idx}.jpg"
+        h['amenities'] = assign_amenities(h)
     
     # Check if data already exists to avoid duplicates
     conn = get_db_connection()
@@ -230,8 +273,10 @@ def load_sample_data():
             price=hotel["price"],
             room_type=hotel["room_type"],
             rating=hotel["rating"],
+            guests=hotel.get("guests", 2),
             description=hotel["description"],
-            image_url=hotel["image_url"]
+            image_url=hotel["image_url"],
+            amenities=hotel.get("amenities", [])
         )
     
     print(f"✓ Successfully loaded {len(hotels)} hotels into database")
