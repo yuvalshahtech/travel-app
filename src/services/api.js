@@ -112,6 +112,13 @@ function normalizeHotel(raw) {
   if (imageUrl.startsWith('/')) {
     imageUrl = `${API_BASE}${imageUrl}`;
   }
+
+  const amenities = Array.isArray(raw.amenities) ? raw.amenities : [];
+  const reviews = Array.isArray(raw.reviews) ? raw.reviews : [];
+  let detailImage = raw.image || raw.image_url || imageUrl;
+  if (typeof detailImage === 'string' && detailImage.startsWith('/')) {
+    detailImage = `${API_BASE}${detailImage}`;
+  }
   
   return {
     id: Number(raw.id),
@@ -122,6 +129,10 @@ function normalizeHotel(raw) {
     rating: Number(raw.rating ?? 0),
     guests: Number(raw.guests ?? 2),
     image_url: imageUrl,
+    amenities,
+    image: detailImage,
+    reviews,
+    max_guests: Number(raw.max_guests ?? raw.guests ?? 2),
     latitude: raw.latitude != null ? Number(raw.latitude) : null,
     longitude: raw.longitude != null ? Number(raw.longitude) : null,
     description: raw.description ?? '',

@@ -5,7 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hotel Details - Travel Explorer</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
+        :root {
+            --brand-red: #d90429;
+            --brand-red-dark: #b50321;
+            --brand-red-soft: rgba(217, 4, 41, 0.08);
+            --border: #e6e6e6;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -20,13 +29,16 @@
 
         header {
             background-color: #fff;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--border);
             padding: 15px 20px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .header-content {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
@@ -36,12 +48,12 @@
         .logo {
             font-size: 20px;
             font-weight: bold;
-            color: #FF5A5F;
+            color: var(--brand-red);
             text-decoration: none;
         }
 
         button {
-            background-color: #FF5A5F;
+            background-color: var(--brand-red);
             color: white;
             border: none;
             padding: 8px 16px;
@@ -52,17 +64,17 @@
         }
 
         button:hover {
-            background-color: #E74C52;
+            background-color: var(--brand-red-dark);
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
 
         .back-button {
-            color: #FF5A5F;
+            color: var(--brand-red);
             background: none;
             border: none;
             font-size: 16px;
@@ -75,175 +87,257 @@
             text-decoration: underline;
         }
 
-        .hotel-header {
+        .page-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 40px;
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 24px;
         }
 
-        .hotel-image {
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #222;
+        }
+
+        .cover-image {
             width: 100%;
-            height: 400px;
+            height: 360px;
             object-fit: cover;
-            border-radius: 8px;
+            border-radius: 12px;
             background-color: #e0e0e0;
         }
 
-        .hotel-details-main {
+        .hotel-header {
             display: flex;
             flex-direction: column;
+            gap: 10px;
         }
 
         .hotel-title {
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 15px;
+            font-size: 28px;
+            font-weight: 700;
             color: #222;
         }
 
         .hotel-location {
-            font-size: 16px;
+            font-size: 14px;
             color: #666;
-            margin-bottom: 10px;
         }
 
-        .hotel-rating {
+        .hotel-meta {
             display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 25px;
+            color: #444;
+            font-size: 14px;
         }
 
-        .star {
-            color: #FF5A5F;
-            font-size: 20px;
+        .meta-pill {
+            background: var(--brand-red-soft);
+            color: var(--brand-red);
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
-        .rating-value {
+        .price-row {
+            font-size: 26px;
+            font-weight: 700;
+            color: #222;
+        }
+
+        .price-row span {
+            font-size: 13px;
+            color: #777;
+            font-weight: 500;
+        }
+
+        .quick-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .quick-info-item {
+            border-left: 3px solid var(--brand-red);
+            padding-left: 12px;
+        }
+
+        .quick-info-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #888;
+        }
+
+        .quick-info-value {
             font-size: 16px;
             font-weight: 600;
             color: #222;
-        }
-
-        .hotel-price-section {
-            margin: 25px 0;
-            padding: 20px;
-            background-color: #f9f9f9;
-            border-radius: 8px;
-        }
-
-        .price-label {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 5px;
-        }
-
-        .price-value {
-            font-size: 36px;
-            font-weight: bold;
-            color: #222;
-        }
-
-        .room-type {
-            display: inline-block;
-            background-color: #e8f5e9;
-            color: #2e7d32;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin-bottom: 20px;
-        }
-
-        .book-button {
-            padding: 16px 32px;
-            font-size: 18px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: auto;
-        }
-
-        .book-button:hover {
-            background-color: #E74C52;
-        }
-
-        .description-section {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-
-        .section-title {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #222;
+            margin-top: 4px;
         }
 
         .description-text {
-            font-size: 16px;
+            font-size: 15px;
             line-height: 1.6;
-            color: #666;
+            color: #555;
         }
 
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .info-item {
-            border-left: 4px solid #FF5A5F;
-            padding-left: 15px;
-        }
-
-        .info-label {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        .info-value {
-            font-size: 18px;
+        .read-more {
+            background: none;
+            border: none;
+            color: var(--brand-red);
             font-weight: 600;
-            color: #222;
+            cursor: pointer;
+            margin-top: 8px;
+            padding: 0;
         }
 
-        .loading {
+        .amenities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .amenity-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #fafafa;
+            border-radius: 10px;
+            border: 1px solid #f0f0f0;
+        }
+
+        .review-filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .review-filter-btn {
+            padding: 6px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 20px;
+            background: white;
+            color: #555;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .review-filter-btn:hover {
+            border-color: var(--brand-red);
+            color: var(--brand-red);
+            background: var(--brand-red-soft);
+        }
+
+        .review-filter-btn.active {
+            background: var(--brand-red);
+            color: white;
+            border-color: var(--brand-red);
+        }
+
+        .amenity-icon {
+            width: 18px;
+            height: 18px;
+            color: var(--brand-red);
+            flex-shrink: 0;
+        }
+
+        .hotel-map-section {
+            position: relative;
+            z-index: 1;
+        }
+
+        #hotelMap {
+            width: 100%;
+            height: 320px;
+            border-radius: 12px;
+            position: relative;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .hotel-map-section .leaflet-pane,
+        .hotel-map-section .leaflet-top,
+        .hotel-map-section .leaflet-bottom {
+            z-index: 0 !important;
+        }
+
+        .reviews-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .review-card {
+            background: #fafafa;
+            border: 1px solid #f0f0f0;
+            padding: 12px 14px;
+            border-radius: 10px;
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #444;
+            margin-bottom: 6px;
+        }
+
+        .booking-card {
+            position: sticky;
+            top: 90px;
+            align-self: start;
+        }
+
+        .booking-card .price-row {
+            font-size: 24px;
+        }
+
+        .booking-button {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .loading,
+        .error {
             text-align: center;
             padding: 60px 20px;
             color: #999;
-            font-size: 18px;
+            font-size: 16px;
         }
 
-        @media (max-width: 768px) {
-            .hotel-header {
+        @media (max-width: 900px) {
+            .page-layout {
                 grid-template-columns: 1fr;
+            }
+
+            .booking-card {
+                position: static;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .cover-image {
+                height: 240px;
             }
 
             .hotel-title {
-                font-size: 24px;
-            }
-
-            .price-value {
-                font-size: 28px;
-            }
-
-            .info-grid {
-                grid-template-columns: 1fr;
+                font-size: 22px;
             }
         }
     </style>
@@ -259,96 +353,300 @@
     <div class="container">
         <button class="back-button" onclick="goBack()">← Back to Search</button>
 
-        <div id="hotelDetails" class="loading">Loading hotel details...</div>
+        <div id="detailsLoading" class="loading">Loading hotel details…</div>
+        <div id="detailsError" class="error" style="display: none;">Unable to load hotel details.</div>
+
+        <div id="detailsContent" class="page-layout" style="display: none;">
+            <main class="details-main">
+                <section class="section-card">
+                    <img id="hotelImage" class="cover-image" alt="Hotel image" loading="lazy" />
+                </section>
+
+                <section class="section-card hotel-header">
+                    <div>
+                        <div id="hotelName" class="hotel-title"></div>
+                        <div id="hotelCity" class="hotel-location"></div>
+                    </div>
+                    <div class="hotel-meta">
+                        <span id="hotelRating" class="meta-pill"></span>
+                        <span id="reviewCount" class="meta-pill"></span>
+                        <span id="roomType" class="meta-pill"></span>
+                    </div>
+                    <div id="priceRow" class="price-row"></div>
+                </section>
+
+                <section class="section-card quick-info">
+                    <div class="quick-info-item">
+                        <div class="quick-info-label">Room type</div>
+                        <div id="infoRoomType" class="quick-info-value"></div>
+                    </div>
+                    <div class="quick-info-item">
+                        <div class="quick-info-label">Max guests</div>
+                        <div id="infoGuests" class="quick-info-value"></div>
+                    </div>
+                </section>
+
+                <section class="section-card">
+                    <div class="section-title">Description</div>
+                    <p id="descriptionText" class="description-text"></p>
+                    <button id="readMoreBtn" class="read-more" style="display: none;">Read more</button>
+                </section>
+
+                <section class="section-card">
+                    <div class="section-title">Amenities</div>
+                    <div id="amenitiesGrid" class="amenities-grid"></div>
+                </section>
+
+                <section class="section-card hotel-map-section">
+                    <div class="section-title">Location</div>
+                    <div id="hotelMap"></div>
+                </section>
+
+                <section class="section-card">
+                    <div class="section-title">Reviews</div>
+                    <div class="review-filters" id="reviewFilters" style="margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;"></div>
+                    <div id="reviewsList" class="reviews-list"></div>
+                </section>
+            </main>
+
+            <aside class="section-card booking-card">
+                <div class="section-title">Your stay</div>
+                <div id="bookingPrice" class="price-row"></div>
+                <button class="booking-button">Reserve</button>
+                <p style="margin-top: 10px; color: #888; font-size: 12px;">No payment required yet</p>
+            </aside>
+        </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check authentication
+        // Prefer same-origin on port 3000; otherwise fallback to backend:8000
+        (function(){
+            const origin = window.location.origin || '';
+            if (!window.__API_BASE__) {
+                if (origin.includes(':3000') || origin.includes(':8000')) {
+                    window.__API_BASE__ = '';
+                } else {
+                    window.__API_BASE__ = 'http://localhost:8000';
+                }
+            }
+        })();
+    </script>
+    <script type="module">
+        import { getHotelById } from './services/api.js';
+
+        let mapInstance = null;
+        let fullDescription = '';
+        let isExpanded = false;
+        let allReviews = [];
+        let currentFilter = 'all';
+
+        const amenityIcons = {
+            'Wi-Fi': `<svg class="amenity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M12 20h.01"/></svg>`,
+            'Pool': `<svg class="amenity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21c2.5-2 5.5-2 8 0s5.5 2 8 0 5.5-2 8 0"/><path d="M2 16c2.5-2 5.5-2 8 0s5.5 2 8 0 5.5-2 8 0"/></svg>`,
+            'Beach access': `<svg class="amenity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="3"/><path d="M2 20c4-3 7-3 10 0s6 3 10 0"/></svg>`,
+            'AC': `<svg class="amenity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m5 7 14 10"/><path d="m19 7-14 10"/></svg>`,
+            'Kitchen': `<svg class="amenity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18"/><path d="M7 9v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9"/><path d="M9 5h6"/></svg>`
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
             const userEmail = localStorage.getItem('userEmail');
             if (!userEmail) {
                 window.location.href = 'signup.html';
                 return;
             }
 
-            // Get hotel ID from URL
             const urlParams = new URLSearchParams(window.location.search);
             const hotelId = urlParams.get('id');
-
             if (!hotelId) {
-                document.getElementById('hotelDetails').innerHTML = '<div class="loading">Hotel not found</div>';
+                showError('Hotel not found');
                 return;
             }
 
-            // Load hotel details
-            fetch(`/hotels/${hotelId}`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Hotel not found');
-                    return response.json();
-                })
-                .then(hotel => {
-                    renderHotelDetails(hotel);
-                })
-                .catch(error => {
-                    console.error('Error loading hotel:', error);
-                    document.getElementById('hotelDetails').innerHTML = '<div class="loading">Failed to load hotel details</div>';
-                });
+            try {
+                const hotel = await getHotelById(hotelId);
+                renderHotel(hotel);
+            } catch (error) {
+                console.error('Error loading hotel:', error);
+                showError('Failed to load hotel details');
+            }
         });
 
-        function renderHotelDetails(hotel) {
-            const html = `
-                <div class="hotel-header">
-                    <img src="${hotel.image_url || 'https://via.placeholder.com/400x300?text=Hotel'}" alt="${hotel.name}" class="hotel-image" />
-                    <div class="hotel-details-main">
-                        <h1 class="hotel-title">${hotel.name}</h1>
-                        <p class="hotel-location">📍 ${hotel.city}, ${hotel.country}</p>
-                        
-                        <div class="hotel-rating">
-                            <span class="star">★</span>
-                            <span class="rating-value">${hotel.rating.toFixed(2)}</span>
-                        </div>
-
-                        <span class="room-type">${hotel.room_type}</span>
-
-                        <div class="hotel-price-section">
-                            <div class="price-label">Price per night</div>
-                            <div class="price-value">₹${(Math.round(hotel.price)).toLocaleString('en-IN')}</div>
-                        </div>
-
-                        <button class="book-button" onclick="bookNow(${hotel.id}, '${hotel.name}')">Book Now</button>
-                    </div>
-                </div>
-
-                <div class="description-section">
-                    <h2 class="section-title">About this place</h2>
-                    <p class="description-text">${hotel.description || 'No description available'}</p>
-                </div>
-
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">Room Type</div>
-                        <div class="info-value">${hotel.room_type}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Location</div>
-                        <div class="info-value">${hotel.city}, ${hotel.country}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Rating</div>
-                        <div class="info-value">⭐ ${hotel.rating.toFixed(2)}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Price per Night</div>
-                        <div class="info-value">₹${(Math.round(hotel.price)).toLocaleString('en-IN')}</div>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('hotelDetails').innerHTML = html;
+        function showError(message) {
+            document.getElementById('detailsLoading').style.display = 'none';
+            const errorEl = document.getElementById('detailsError');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
         }
 
-        function bookNow(hotelId, hotelName) {
-            alert(`🎉 Booking feature coming soon!\n\nYou're about to book: ${hotelName}\n\nThis is a demo version without payment processing.`);
+        function renderHotel(hotel) {
+            document.getElementById('detailsLoading').style.display = 'none';
+            document.getElementById('detailsContent').style.display = 'grid';
+
+            const hotelImage = document.getElementById('hotelImage');
+            hotelImage.src = hotel.image || hotel.image_url;
+            hotelImage.alt = hotel.name;
+
+            document.getElementById('hotelName').textContent = hotel.name;
+            document.getElementById('hotelCity').textContent = hotel.city;
+            document.getElementById('hotelRating').textContent = `★ ${hotel.rating.toFixed(1)}`;
+            document.getElementById('reviewCount').textContent = `${hotel.reviews.length} reviews`;
+            document.getElementById('roomType').textContent = hotel.room_type || 'Room';
+
+            const priceText = `₹${Math.round(hotel.price).toLocaleString('en-IN')} `;
+            document.getElementById('priceRow').innerHTML = `${priceText}<span>/ night</span>`;
+            document.getElementById('bookingPrice').innerHTML = `${priceText}<span>/ night</span>`;
+
+            document.getElementById('infoRoomType').textContent = hotel.room_type || 'Room';
+            document.getElementById('infoGuests').textContent = `${hotel.max_guests} guests`;
+
+            fullDescription = hotel.description || 'No description available.';
+            renderDescription();
+
+            renderAmenities(hotel.amenities || []);
+            allReviews = hotel.reviews || [];
+            currentFilter = 'all';
+            renderReviewFilters();
+            renderReviews();
+            renderMap(hotel.latitude, hotel.longitude, hotel.name);
+        }
+
+        function renderDescription() {
+            const descEl = document.getElementById('descriptionText');
+            const readMoreBtn = document.getElementById('readMoreBtn');
+            const limit = 220;
+
+            if (fullDescription.length <= limit) {
+                descEl.textContent = fullDescription;
+                readMoreBtn.style.display = 'none';
+                return;
+            }
+
+            if (!isExpanded) {
+                descEl.textContent = `${fullDescription.slice(0, limit)}...`;
+                readMoreBtn.textContent = 'Read more';
+            } else {
+                descEl.textContent = fullDescription;
+                readMoreBtn.textContent = 'Show less';
+            }
+
+            readMoreBtn.style.display = 'inline-flex';
+            readMoreBtn.onclick = () => {
+                isExpanded = !isExpanded;
+                renderDescription();
+            };
+        }
+
+        function renderAmenities(amenities) {
+            const grid = document.getElementById('amenitiesGrid');
+            if (!amenities.length) {
+                grid.innerHTML = '<div style="color:#777;">No amenities listed.</div>';
+                return;
+            }
+
+            grid.innerHTML = amenities.map((amenity) => {
+                const icon = amenityIcons[amenity] || amenityIcons['Wi-Fi'];
+                return `
+                    <div class="amenity-item">
+                        ${icon}
+                        <span>${amenity}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function clampRating(rating) {
+            const floored = Math.floor(Number(rating));
+            return Math.max(1, Math.min(5, floored));
+        }
+
+        function setActiveFilter(activeBtn) {
+            document.querySelectorAll('.review-filter-btn').forEach((btn) => {
+                btn.classList.remove('active');
+            });
+            activeBtn.classList.add('active');
+        }
+
+        function renderReviewFilters() {
+            const filtersContainer = document.getElementById('reviewFilters');
+            const filters = [
+                { label: 'All', rating: 'all' },
+                { label: '5★', rating: 5 },
+                { label: '4★', rating: 4 },
+                { label: '3★', rating: 3 },
+                { label: '2★', rating: 2 },
+                { label: '1★', rating: 1 }
+            ];
+
+            filtersContainer.innerHTML = filters.map((filter) => `
+                <button class="review-filter-btn ${filter.rating === 'all' ? 'active' : ''}" 
+                        data-rating="${filter.rating}">
+                    ${filter.label}
+                </button>
+            `).join('');
+
+            // Attach event listeners
+            document.querySelectorAll('.review-filter-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const rating = btn.dataset.rating === 'all' ? 'all' : Number(btn.dataset.rating);
+                    currentFilter = rating;
+                    setActiveFilter(btn);
+                    renderReviews();
+                });
+            });
+        }
+
+        function renderReviews() {
+            const container = document.getElementById('reviewsList');
+            container.innerHTML = '';
+
+            let filtered = [...allReviews];
+
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter((r) => clampRating(r.rating) === currentFilter);
+            }
+
+            filtered = filtered.slice(0, 3);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="color:#777;">No reviews with this rating.</div>';
+                return;
+            }
+
+            filtered.forEach((review) => {
+                const clampedRating = clampRating(review.rating);
+                const div = document.createElement('div');
+                div.className = 'review-card';
+                div.innerHTML = `
+                    <div class="review-header">
+                        <span>${review.user}</span>
+                        <span>★ ${clampedRating.toFixed(1)}</span>
+                    </div>
+                    <div style="color:#555; font-size:14px;">${review.comment}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderMap(lat, lng, name) {
+            if (lat == null || lng == null) {
+                return;
+            }
+
+            if (mapInstance) {
+                mapInstance.remove();
+            }
+
+            mapInstance = L.map('hotelMap').setView([lat, lng], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(mapInstance);
+
+            L.marker([lat, lng]).addTo(mapInstance).bindPopup(name);
+
+            setTimeout(() => {
+                mapInstance.invalidateSize();
+            }, 100);
         }
 
         function goBack() {
@@ -359,6 +657,9 @@
             localStorage.removeItem('userEmail');
             window.location.href = 'signup.html';
         }
+
+        window.goBack = goBack;
+        window.logout = logout;
     </script>
 </body>
 </html>

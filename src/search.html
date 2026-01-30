@@ -913,6 +913,13 @@
         let selectedFilters = new Set(); // Track which filter types are selected
         let expandedFilter = null; // Track which filter is currently expanded
 
+        // Clamp rating strictly to [1.0, 5.0] range, preserving float values
+        function clampRating(rating) {
+            const value = Number(rating);
+            if (Number.isNaN(value)) return null;
+            return Math.min(5, Math.max(1, value));
+        }
+
         // Floating Filter Panel - Open/Close
         function openFilterPanel() {
             const overlay = document.querySelector('.filter-panel-overlay');
@@ -1098,7 +1105,13 @@
             const minPrice = parseFloat(document.getElementById('minPriceInput').value);
             const maxPrice = parseFloat(document.getElementById('maxPriceInput').value);
             const guests = parseInt(document.getElementById('guestsInput').value);
-            const minRating = parseFloat(document.getElementById('minRatingInput').value);
+            let minRating = parseFloat(document.getElementById('minRatingInput').value);
+            
+            // Clamp minRating to valid range [1.0, 5.0]
+            if (minRating) {
+                const clampedRating = clampRating(minRating);
+                minRating = clampedRating !== null ? clampedRating : undefined;
+            }
             
             // Read property type checkboxes
             const propertyTypes = [];
@@ -1126,8 +1139,8 @@
                 return;
             }
 
-            if (minRating && (minRating < 0 || minRating > 5)) {
-                alert('Rating must be between 0 and 5 stars');
+            if (minRating && (minRating < 1 || minRating > 5)) {
+                alert('Rating must be between 1 and 5 stars');
                 return;
             }
 
@@ -1474,8 +1487,11 @@
                         parts.push(`<span class="marker-icon">${icons.price}</span>`);
                     }
                     if (ratingActive) {
-                        const ratingValue = (hotel.rating ?? 0).toFixed(1);
-                        parts.push(`<span class="marker-part"><span class="marker-icon">${icons.rating}</span><span class="marker-text">${ratingValue}</span></span>`);
+                        const clampedRating = clampRating(hotel.rating);
+                        if (clampedRating !== null) {
+                            const ratingValue = clampedRating.toFixed(1);
+                            parts.push(`<span class="marker-part"><span class="marker-icon">${icons.rating}</span><span class="marker-text">${ratingValue}</span></span>`);
+                        }
                     }
                     if (guestsActive) {
                         const guestsValue = hotel.guests ?? 0;
@@ -1560,14 +1576,14 @@
 
             // Render list
             document.getElementById('hotelList').innerHTML = hotels.map(hotel => `
-                <div class="hotel-list-item" id="listitem-${hotel.id}" onclick="highlightHotel(${hotel.id})">
+                <div class="hotel-list-item" id="listitem-${hotel.id}" onclick="viewDetails(${hotel.id})">
                     <div class="list-hotel-name">${hotel.name}</div>
                     <div class="list-hotel-location">${hotel.city}, ${hotel.country}</div>
                     <div class="list-hotel-footer">
                         <div class="list-hotel-price">₹${(Math.round(hotel.price)).toLocaleString('en-IN')}</div>
                         <div class="list-hotel-rating">
                             <span class="star">★</span>
-                            <span>${hotel.rating.toFixed(2)}</span>
+                            <span>${(() => { const cr = clampRating(hotel.rating); return cr !== null ? cr.toFixed(2) : 'N/A'; })()}</span>
                         </div>
                     </div>
                 </div>
@@ -1576,7 +1592,8 @@
 
         function buildPopupContent(hotel) {
             const price = `₹${(Math.round(hotel.price)).toLocaleString('en-IN')}`;
-            const rating = hotel.rating ? hotel.rating.toFixed(2) : 'N/A';
+            const clampedRating = clampRating(hotel.rating);
+            const rating = clampedRating !== null ? clampedRating.toFixed(2) : 'N/A';
             const location = [hotel.city, hotel.country].filter(Boolean).join(', ');
             const roomType = hotel.room_type ? `<div class="popup-card-meta">🛏️ ${hotel.room_type}</div>` : '';
             
