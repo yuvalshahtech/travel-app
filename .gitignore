@@ -1,13 +1,46 @@
+# Environment variables
 .env
+.venv/
+venv/
+env/
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Database (optional: uncomment to ignore local DB)
+backend/auth.db
+
+# Obsolete features (image variants - removed)
+backend/uploads/generated/
+
+# IDE / Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
 *.log
 *.tmp
 *.swp
 *.swo
-.DS_Store
-Thumbs.db
+*~
+
+# Node.js (if using npm for frontend tooling)
 node_modules/
-frontend/node_modules/
+package-lock.json
+
+# Scripts (local environment setup)
 set_brevo_env.ps1
-backend/auth.db
