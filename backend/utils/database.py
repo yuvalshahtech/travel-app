@@ -61,6 +61,28 @@ def init_database():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # Create bookings table for reservations
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bookings (
+            booking_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hotel_id INTEGER NOT NULL,
+            check_in_date TEXT NOT NULL,
+            check_out_date TEXT NOT NULL,
+            guests INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'confirmed',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (hotel_id) REFERENCES hotels(id)
+        )
+    """)
+
+    # Indexes for faster availability checks
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_bookings_hotel_id ON bookings(hotel_id);
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings(check_in_date, check_out_date);
+    """)
     
     # Add guests column to existing tables (for backwards compatibility)
     try:
@@ -78,9 +100,24 @@ def init_database():
         # Column already exists, skip
         pass
     
+    # Add user_id column to bookings table (for user-specific booking history)
+    try:
+        cursor.execute("ALTER TABLE bookings ADD COLUMN user_id INTEGER")
+        conn.commit()
+    except sqlite3.OperationalError:
+        # Column already exists, skip
+        pass
+    
+    # Add price column to bookings table
+    try:
+        cursor.execute("ALTER TABLE bookings ADD COLUMN price REAL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        # Column already exists, skip
+        pass
+    
     conn.commit()
     conn.close()
-    print("Database initialized successfully")
 
 def get_user_by_email(email):
     """Get user by email"""
@@ -319,3 +356,118 @@ def search_hotels_with_filters(query, limit=50, min_price=None, max_price=None, 
         return filtered_hotels
     
     return hotels
+
+def get_overlapping_bookings(hotel_id, check_in_date, check_out_date):
+    """Get overlapping confirmed bookings for a hotel within a date range"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT * FROM bookings
+        WHERE hotel_id = ?
+          AND status = 'confirmed'
+          AND check_in_date < ?
+          AND check_out_date > ?
+        """,
+        (hotel_id, check_out_date, check_in_date)
+    )
+    bookings = cursor.fetchall()
+    conn.close()
+    return bookings
+
+def create_booking(hotel_id, check_in_date, check_out_date, guests, status="confirmed", user_id=None, price=None):
+    """Create a booking record and return booking_id"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO bookings (hotel_id, check_in_date, check_out_date, guests, status, user_id, price)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (hotel_id, check_in_date, check_out_date, guests, status, user_id, price)
+    )
+    conn.commit()
+    booking_id = cursor.lastrowid
+    conn.close()
+    return booking_id
+
+def get_hotel_bookings(hotel_id):
+    """Get all confirmed bookings for a hotel, sorted by check_in_date"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT check_in_date, check_out_date
+        FROM bookings
+        WHERE hotel_id = ? AND status = 'confirmed'
+        ORDER BY check_in_date ASC
+        """,
+        (hotel_id,)
+    )
+    bookings = cursor.fetchall()
+    conn.close()
+    return bookings
+
+def merge_date_ranges(ranges):
+    """
+    Merge overlapping or adjacent date ranges.
+    
+    Input: List of tuples [(start_date_str, end_date_str), ...]
+    Output: List of merged tuples with no overlaps
+    
+    Algorithm:
+    1. Sort ranges by start date
+    2. Iterate through and merge adjacent/overlapping ranges
+    3. Return merged list
+    
+    Example:
+    - Input: [('2026-02-10', '2026-02-12'), ('2026-02-11', '2026-02-15')]
+    - Output: [('2026-02-10', '2026-02-15')]
+    """
+    if not ranges:
+        return []
+    
+    # Sort ranges by start date
+    sorted_ranges = sorted(ranges, key=lambda x: x[0])
+    
+    merged = [sorted_ranges[0]]
+    
+    for current_start, current_end in sorted_ranges[1:]:
+        last_start, last_end = merged[-1]
+        
+        # Check if current range overlaps or is adjacent to the last merged range
+        # Adjacent means: last_end equals current_start (no gap between them)
+        # Overlapping means: current_start <= last_end (current starts before or when last ends)
+        if current_start <= last_end:
+            # Merge by extending the end date if current_end is later
+            merged[-1] = (last_start, max(last_end, current_end))
+        else:
+            # No overlap, add as new range
+            merged.append((current_start, current_end))
+    
+    return merged
+
+def get_user_bookings(user_id):
+    """Get all bookings for a specific user with hotel details"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT 
+            b.booking_id,
+            b.hotel_id,
+            h.name as hotel_name,
+            b.check_in_date,
+            b.check_out_date,
+            b.guests,
+            b.status,
+            b.price,
+            h.price as hotel_nightly_rate,
+            b.created_at
+        FROM bookings b
+        JOIN hotels h ON b.hotel_id = h.id
+        WHERE b.user_id = ?
+        ORDER BY b.check_in_date DESC
+    """, (user_id,))
+    bookings = cursor.fetchall()
+    conn.close()
+    return bookings

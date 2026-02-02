@@ -1,7 +1,10 @@
 // Frontend API service for Travel Explorer
 // Vanilla JavaScript fetch wrapper for backend endpoints
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = (typeof window !== 'undefined' && window.__API_BASE__) ? window.__API_BASE__ : 'http://localhost:8000';
+
+// Export API_BASE for use in other modules
+export { API_BASE };
 
 /**
  * Fetch recent hotels (limited set for homepage)
@@ -97,6 +100,52 @@ export async function getHotelById(hotelId) {
     return normalizeHotel(data);
   } catch (error) {
     console.error(`Error fetching hotel ${hotelId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Check hotel availability
+ */
+export async function checkHotelAvailability(payload) {
+  try {
+    const response = await fetch(`${API_BASE}/hotels/availability`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error checking availability:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a booking and trigger confirmation email
+ */
+export async function createBooking(payload) {
+  try {
+    const response = await fetch(`${API_BASE}/hotels/bookings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating booking:', error);
     throw error;
   }
 }

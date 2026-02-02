@@ -82,6 +82,93 @@
         .logout-btn:active {
             transform: translateY(0);
         }
+
+        /* Logout Confirmation Modal */
+        .logout-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .logout-modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logout-modal {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            padding: 28px;
+            max-width: 400px;
+            width: 90%;
+            animation: slideUp 0.3s ease;
+        }
+
+        .logout-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .logout-modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .logout-modal-btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-modal-btn-cancel {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .logout-modal-btn-cancel:hover {
+            background-color: #e0e0e0;
+        }
+
+        .logout-modal-btn-logout {
+            background-color: #ff6b6b;
+            color: white;
+        }
+
+        .logout-modal-btn-logout:hover {
+            background-color: #ff5252;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -97,7 +184,104 @@
             <p>In a real application, you would see your personalized content here.</p>
         </div>
         
-        <a href="login.html" class="logout-btn">Logout</a>
+        <a href="#" class="logout-btn" onclick="logout(event)">Logout</a>
     </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="logout-modal-overlay" id="logoutModal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+        <div class="logout-modal">
+            <h2 class="logout-modal-title" id="logoutModalTitle">Are you sure you want to logout?</h2>
+            <div class="logout-modal-buttons">
+                <button class="logout-modal-btn logout-modal-btn-cancel" id="logoutCancelBtn">Cancel</button>
+                <button class="logout-modal-btn logout-modal-btn-logout" id="logoutConfirmBtn">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function logout(event) {
+            // Prevent default link behavior
+            event.preventDefault();
+            // Show custom modal every time
+            showLogoutModal();
+        }
+
+        function showLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            const cancelBtn = document.getElementById('logoutCancelBtn');
+            const confirmBtn = document.getElementById('logoutConfirmBtn');
+            
+            // Show modal
+            modal.classList.add('show');
+            
+            // Focus on cancel button for accessibility
+            cancelBtn.focus();
+            
+            // Trap focus within modal
+            const focusableElements = modal.querySelectorAll('button');
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+            
+            function trapFocus(e) {
+                if (e.key === 'Tab') {
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstElement) {
+                            lastElement.focus();
+                            e.preventDefault();
+                        }
+                    } else {
+                        if (document.activeElement === lastElement) {
+                            firstElement.focus();
+                            e.preventDefault();
+                        }
+                    }
+                }
+                if (e.key === 'Escape') {
+                    hideLogoutModal();
+                }
+            }
+            
+            modal.addEventListener('keydown', trapFocus);
+            
+            // Cancel button handler
+            function handleCancel() {
+                hideLogoutModal();
+                cleanup();
+            }
+            
+            // Confirm button handler
+            function handleConfirm() {
+                hideLogoutModal();
+                cleanup();
+                // Proceed with logout
+                localStorage.removeItem('userEmail');
+                window.location.href = 'login.html';
+            }
+            
+            // Close on overlay click
+            function handleOverlayClick(e) {
+                if (e.target === modal) {
+                    hideLogoutModal();
+                    cleanup();
+                }
+            }
+            
+            function cleanup() {
+                cancelBtn.removeEventListener('click', handleCancel);
+                confirmBtn.removeEventListener('click', handleConfirm);
+                modal.removeEventListener('click', handleOverlayClick);
+                modal.removeEventListener('keydown', trapFocus);
+            }
+            
+            cancelBtn.addEventListener('click', handleCancel);
+            confirmBtn.addEventListener('click', handleConfirm);
+            modal.addEventListener('click', handleOverlayClick);
+        }
+        
+        function hideLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            modal.classList.remove('show');
+        }
+    </script>
 </body>
 </html>

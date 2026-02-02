@@ -1,231 +1,363 @@
-# Travel App – Hotel Search & Discovery
+# Travel Explorer - Hotel Booking System
 
-A modern hotel search and booking platform with interactive map-based browsing, real-time filtering, and user authentication. Built with FastAPI backend and vanilla JavaScript frontend, featuring single high-quality images per hotel, intelligent review systems, and location-based discovery.
+A modern, full-featured hotel booking application with user authentication, interactive calendar UI, real-time availability checking, user-specific booking history, and email confirmation system.
 
-## Features
+## 🚀 Features
 
-✨ **Core Features:**
-- 🏨 **Single Image Per Hotel** – Clean, focused UI with one optimized image per property
-- 🗺️ **Interactive Map Integration** – Leaflet.js powered map with custom pins and popups
-- 🔍 **Advanced Search & Filters** – Price range, guest capacity, property types, and amenities
-- ⭐ **Smart Review System** – Reviews automatically calibrated to match hotel ratings
-- 🔐 **Secure Authentication** – Email/password signup with OTP verification
-- 📍 **Location-Based Discovery** – City search with real-time results
-- 💳 **Booking Interface** – Clean reservation UI with pricing details
+### Core Functionality
+- **User Authentication**: Secure signup/login with OTP email verification
+- **Hotel Search & Filtering**: Search by city, price range, rating, amenities, and guest capacity
+- **Interactive Calendar Booking**: Date range picker with visual availability indicators
+- **Real-time Availability**: Check hotel availability before booking with conflict detection
+- **User Booking History**: Personal booking dashboard with status tracking
+- **Email Confirmations**: Automatic booking confirmation via Brevo API
+- **Responsive Design**: Seamless experience on desktop, tablet, and mobile
 
-## Project Structure
+### UI Enhancements
+- **Blocked Dates Display**: 
+  - Soft pink background (#ffe5e5) for unavailable dates
+  - Subtle lock icon with hover tooltip: "Hotel not available"
+  - Clear distinction from past dates (gray) and available dates (white)
+  
+- **Smart Price Filter**:
+  - Validation triggers only on "Apply Filters" button click
+  - Real-time Apply button visibility when typing
+  - Min/Max validation with helpful error messages
+
+- **User Profile Page**:
+  - View all bookings with hotel details
+  - Status badges (Upcoming, Completed, Cancelled)
+  - Total price and guest count per booking
+  - Empty state handling with demo fallback
+
+- **Consistent Button Styling**:
+  - Unified design language across all buttons
+  - Smooth hover/active transitions with shadows
+  - Accessible focus indicators for keyboard navigation
+  - Responsive layouts for mobile devices
+
+## 🛠️ Tech Stack
+
+**Backend**: FastAPI (Python 3.8+)  
+**Frontend**: Vanilla JavaScript (ES6 modules)  
+**Database**: SQLite with row factory for dict-like access  
+**Email**: Brevo Transactional Email API  
+**Maps**: Leaflet.js for interactive location display  
+**Validation**: Pydantic v2 for request/response schemas  
+
+## 📁 Project Structure
 
 ```
-Travel-App/
-├─ backend/
-│  ├─ main.py              # FastAPI application entry point
-│  ├─ requirements.txt     # Python dependencies
-│  ├─ auth.db              # SQLite database (auto-generated)
-│  ├─ models/              # Pydantic data models
-│  ├─ routes/              # API routes (auth, hotels)
-│  │  ├─ auth.py           # Authentication endpoints
-│  │  └─ hotels.py         # Hotel search & details
-│  ├─ schemas/             # Request/response schemas
-│  │  └─ hotel.py          # Hotel & review schemas
-│  ├─ utils/               # Utilities
-│  │  ├─ auth.py           # JWT & password hashing
-│  │  ├─ database.py       # SQLite operations
-│  │  ├─ email.py          # Email service (Brevo)
-│  │  └─ otp.py            # OTP generation/validation
-│  ├─ load_hotels.py       # Database seeder script
-│  ├─ clear_hotels.py      # Database cleanup utility
-│  └─ uploads/
-│     └─ hotels/           # Hotel images (single per hotel)
-│
-├─ src/
-│  ├─ login.html           # User login page
-│  ├─ signup.html          # User registration with OTP
-│  ├─ home.html            # Featured hotels dashboard
-│  ├─ search.html          # Hotel search with map & filters
-│  ├─ hotel-details.html   # Detailed hotel view with reviews
-│  ├─ dashboard.html       # User dashboard
-│  └─ services/
-│     └─ api.js            # API client (ES modules)
-│
-├─ .env                    # Environment configuration
-├─ .gitignore              # Git ignore rules
-└─ README.md               # This file
+travel-app/
+├── backend/
+│   ├── main.py                 # FastAPI app entry point
+│   ├── requirements.txt        # Python dependencies
+│   ├── load_hotels.py         # Database seeding script (REQUIRED)
+│   ├── clear_hotels.py        # Database reset utility
+│   ├── models/
+│   │   └── user.py           # User database model
+│   ├── routes/
+│   │   ├── auth.py           # Authentication endpoints
+│   │   └── hotels.py         # Hotel & booking endpoints
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   └── hotel.py          # Pydantic validation schemas
+│   └── utils/
+│       ├── database.py       # Database operations & queries
+│       ├── email.py          # Email sending logic
+│       ├── auth.py           # Password hashing & verification
+│       └── otp.py            # OTP generation
+├── src/
+│   ├── home.html             # Homepage with recent hotels
+│   ├── search.html           # Hotel search with filters
+│   ├── hotel-details.html    # Booking interface with calendar
+│   ├── profile.html          # User booking history
+│   ├── signup.html           # User registration
+│   ├── login.html            # User login
+│   ├── dashboard.html        # Admin dashboard
+│   └── services/
+│       └── api.js            # Frontend API client
+├── .env                      # Environment variables (not in git)
+├── .gitignore                # Git ignore rules
+└── README.md                 # This file
 ```
 
-## Tech Stack
-
-**Backend:**
-- Python 3.10+
-- FastAPI – Modern async web framework
-- SQLite – Embedded database
-- Pydantic – Data validation
-- Uvicorn – ASGI server
-- Passlib – Password hashing (bcrypt)
-- Brevo API – Email service
-
-**Frontend:**
-- Vanilla HTML/CSS/JavaScript (ES6 modules)
-- Leaflet.js 1.9.4 – Interactive maps
-- No build tools required
-
-## Installation
+## 🎯 First-Time Setup
 
 ### Prerequisites
-
-- Python 3.10 or higher
+- Python 3.8 or higher
 - pip (Python package manager)
+- Modern web browser (Chrome, Firefox, Safari, Edge)
 
-### Setup
+### Installation Steps
 
-1. **Clone the repository:**
-
+**1. Clone the repository**
 ```bash
-git clone <repository-url>
-cd Travel-App
+git clone <repo-url>
+cd travel-app
 ```
 
-2. **Install backend dependencies:**
+**2. Create and activate virtual environment**
+```bash
+python -m venv venv
 
+# Windows
+venv\Scripts\activate
+
+# macOS/Linux
+source venv/bin/activate
+```
+
+**3. Install Python dependencies**
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-3. **Configure environment variables:**
+**4. Set up environment variables**
 
-Create `.env` in the project root:
+Create a `.env` file in the `backend/` directory:
 
 ```env
-BREVO_API_KEY=xkeysib-your-api-key-here
-SENDER_EMAIL=your-verified-sender@example.com
-DEV_MODE=false
+BREVO_API_KEY=your_brevo_api_key_here
+SENDER_EMAIL=noreply@yourdomain.com
+SENDER_NAME=Travel Explorer
 ```
 
-> **Note:** Get your Brevo API key from [Brevo Dashboard](https://app.brevo.com/) after creating a free account.
+To get a Brevo API key:
+1. Sign up at https://www.brevo.com/
+2. Go to Settings → API Keys
+3. Generate a new API key
+4. Copy and paste into `.env`
 
-4. **Initialize database with sample data:**
-
+**5. Initialize the database with sample hotels** (REQUIRED)
 ```bash
-cd backend
+# From backend/ directory
 python load_hotels.py
 ```
 
-This creates `auth.db` and seeds it with 15 sample hotels.
+This creates:
+- `auth.db` database file
+- `users` table (for authentication)
+- `hotels` table with 6 sample hotels
+- `bookings` table (for reservations)
+- `email_verifications` table (for OTP)
 
-## Running the App
-
-### Start Backend Server
-
+**6. Start the backend server**
 ```bash
-cd backend
+# From backend/ directory
 uvicorn main:app --reload --port 8000
 ```
 
-Backend API will be available at `http://localhost:8000`
+Server will run at: http://127.0.0.1:8000
 
-### Start Frontend Server
+**7. Start the frontend**
 
-**Option A: Python HTTP Server (Recommended)**
-
+Option A - Using Python's built-in server:
 ```bash
+# From project root
 cd src
 python -m http.server 3000
 ```
 
-**Option B: Node.js http-server**
-
+Option B - Using Node.js http-server:
 ```bash
-npm install -g http-server
-cd src
-http-server -p 3000
+# From project root
+npx http-server src -p 3000 --cors
 ```
 
-Open your browser and navigate to:
-- **Home:** http://localhost:3000/home.html
-- **Search:** http://localhost:3000/search.html
-- **Login:** http://localhost:3000/login.html
+**8. Open your browser**
 
-## Usage
+Navigate to: http://localhost:3000
 
-### Search & Filtering
+## 🗄️ Database Management
 
-The search page supports multiple simultaneous filters with AND logic:
-
-- **City Search** – Type city name (e.g., "Mumbai", "Dubai")
-- **Price Range** – Min/max price sliders
-- **Guest Capacity** – Minimum guests filter
-- **Property Types** – Entire place, private room, shared room
-- **Amenities** – Wi-Fi, Pool, Beach access, AC, Kitchen
-- **Star Rating** – Minimum rating filter (1-5 stars)
-
-> Hotels must match **all** selected criteria to appear in results.
-
-### Map Interaction
-
-- **Browse Mode** – Red map pins when no filters active
-- **Filter Mode** – Info-rich pins showing price, guests, amenities
-- **Click Pin** – Opens popup with hotel card
-- **View Hotel** – Click popup button to see full details
-
-### Reviews System
-
-Reviews are intelligently generated to match hotel ratings:
-- Review ratings mathematically average to hotel's overall rating
-- Maintains realistic variance within [1.0, 5.0] range
-- Preserves floating-point precision (e.g., 4.2★, 3.8★)
-- Filter reviews by star rating (1-5 stars)
-- Displays maximum 3 reviews per filter
-
-## Database Management
-
-### Add New Hotels
-
-Edit `backend/load_hotels.py` and run:
-
+### Load Sample Hotels (First-time setup)
 ```bash
-cd backend
-python load_hotels.py
+python backend/load_hotels.py
+```
+- Creates database schema if it doesn't exist
+- Populates hotels table with 6 diverse properties
+- Includes hotels in Mumbai, Goa, Jaipur, Delhi, Bangalore, Udaipur
+- Each hotel has unique amenities, ratings, and pricing
+
+### Reset Hotels Table (Optional)
+```bash
+python backend/clear_hotels.py
+python backend/load_hotels.py
+```
+- `clear_hotels.py` removes all hotels (preserves users and bookings)
+- Useful for database cleanup or fresh hotel data
+
+**Note**: These are essential setup scripts, not test files. Keep them in production.
+
+## 📚 Key Features Documentation
+
+### 1. Blocked Dates Calendar
+
+**Visual Design**:
+- **Available dates**: White background, clickable
+- **Past dates**: Light gray (#f0f0f0), disabled
+- **Blocked dates**: Soft pink (#ffe5e5) with subtle border (#ff9999)
+- Lock icon (8px, opacity 0.4) indicates unavailability
+- Hover tooltip: "Hotel not available" in soft red
+
+**Backend Logic**:
+- Queries confirmed bookings for the hotel
+- Merges overlapping and adjacent date ranges
+- O(n log n) complexity with efficient sorting
+- Prevents double-booking automatically
+
+### 2. Price Filter Validation
+
+**User Experience**:
+- Type freely in Min/Max price fields
+- No validation errors while typing
+- Click "Apply Filters" to validate and filter
+- Clear error message if min > max
+- Apply button shows immediately when typing
+
+### 3. User Booking History
+
+**Features**:
+- Personal booking dashboard at `/profile.html`
+- User identification via localStorage (userId)
+- Multi-user support on same PC (separate histories)
+- Real-time status calculation:
+  - **Upcoming**: check-in date is in the future
+  - **Completed**: check-in date has passed
+  - **Cancelled**: explicitly marked as cancelled
+
+**API Endpoint**:
+```http
+GET /hotels/users/{user_id}/bookings
 ```
 
-### Clear All Hotels
-
-```bash
-cd backend
-python clear_hotels.py
+Response:
+```json
+{
+  "bookings": [
+    {
+      "id": "123",
+      "hotel_id": 1,
+      "hotel_name": "Luxury Beachfront Villa Mumbai",
+      "check_in": "2026-03-01",
+      "check_out": "2026-03-05",
+      "guests": 2,
+      "total_price": 28000.0,
+      "status": "upcoming"
+    }
+  ]
+}
 ```
 
-### Database Schema
+## 🎨 Styling & Design
 
-The app uses SQLite with the following key tables:
-- `users` – User accounts and authentication
-- `hotels` – Hotel listings with single image URL
-- `otps` – Email verification codes
+**Color Palette**:
+- Brand Red: `#d90429` (primary actions)
+- Brand Red Dark: `#b50321` (hover states)
+- Soft Pink: `#ffe5e5` (blocked dates background)
+- Gray: `#6b7280` (secondary text)
+- Light Gray: `#f7f7f7` (page backgrounds)
 
-## API Endpoints
+**Responsive Breakpoints**:
+- Desktop: > 900px (full 2-column layout)
+- Tablet: 768px - 900px (adjusted spacing)
+- Mobile: < 768px (stacked, full-width buttons)
+- Small Mobile: < 480px (optimized touch targets)
 
-### Hotels
+## 🔐 Security Features
 
-- `GET /hotels/search?q={city}` – Search hotels by city
-- `GET /hotels/search?q={city}&min_price={X}&max_price={Y}&guests={Z}&min_rating={R}&property_types={A,B}&amenities={Wi-Fi,Pool}` – Advanced search with filters
-- `GET /hotels/{id}` – Get hotel details with reviews
-- `GET /hotels/recent` – Get recently added hotels
+- Password hashing with bcrypt (Passlib)
+- OTP-based email verification (6 digits, 10-minute expiry)
+- User session management via localStorage
+- SQL injection protection (parameterized queries)
+- CORS configuration for cross-origin requests
+- Environment variables for sensitive data (.env)
 
-### Authentication
+## 🚀 Production Deployment
 
-- `POST /auth/signup` – Create new user account
-- `POST /auth/verify-otp` – Verify email OTP
-- `POST /auth/login` – User login (returns JWT)
+### Pre-Deployment Checklist
 
-## Contributing
+1. **Environment Variables**
+   ```bash
+   # Ensure .env contains:
+   BREVO_API_KEY=<production_key>
+   SENDER_EMAIL=<verified_email>
+   SENDER_NAME=Travel Explorer
+   ```
 
-Contributions are welcome! Please follow these guidelines:
+2. **Database Setup**
+   ```bash
+   python backend/load_hotels.py  # Initialize database
+   ```
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. **Update CORS Settings**
+   
+   In `backend/main.py`, update allowed origins:
+   ```python
+   app.add_middleware(
+       CORSMiddleware,
+       allow_origins=[
+           "https://yourdomain.com",
+           "https://www.yourdomain.com"
+       ],
+       allow_credentials=True,
+       allow_methods=["*"],
+       allow_headers=["*"],
+   )
+   ```
 
-## License
+4. **Use Production ASGI Server**
+   ```bash
+   # Install Gunicorn
+   pip install gunicorn
 
-This project is available for educational and personal use.
+   # Run with multiple workers
+   gunicorn backend.main:app \
+     --workers 4 \
+     --worker-class uvicorn.workers.UvicornWorker \
+     --bind 0.0.0.0:8000
+   ```
+
+5. **Frontend Deployment**
+   - Deploy `src/` folder to static hosting (Netlify, Vercel, Cloudflare Pages)
+   - Update `API_BASE` in `src/services/api.js` to production backend URL
+   - Enable HTTPS for secure connections
+
+## 🐛 Troubleshooting
+
+**Backend won't start**:
+- Check Python version: `python --version` (needs 3.8+)
+- Verify dependencies: `pip install -r requirements.txt`
+- Check port 8000 is available
+
+**Database errors**:
+- Run `python load_hotels.py` to initialize
+- Check `auth.db` exists in `backend/` directory
+- Verify write permissions
+
+**Email not sending**:
+- Verify Brevo API key in `.env`
+- Check sender email is verified in Brevo
+- Review backend logs for error messages
+
+**Frontend can't connect to backend**:
+- Ensure backend is running on port 8000
+- Check `API_BASE` in `src/services/api.js`
+- Verify CORS settings in `backend/main.py`
+
+**Booking history not showing**:
+- Ensure user is logged in (check localStorage)
+- Verify `user_id` is stored: `localStorage.getItem('userId')`
+- Check backend endpoint: `GET /hotels/users/{user_id}/bookings`
+
+## 📄 License
+
+This project is for educational/demonstration purposes.
+
+---
+
+**Version**: 2.0.0  
+**Last Updated**: February 3, 2026  
+**Status**: Production Ready ✅

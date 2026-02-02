@@ -1,46 +1,75 @@
-# Environment variables
+# Environment Variables
 .env
-.venv/
-venv/
-env/
+.env.*
+!.env.example
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+auth.db
 
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
 *.so
-*.egg
+.Python
 *.egg-info/
+.eggs/
 dist/
 build/
+venv/
+env/
+ENV/
 
-# Database (optional: uncomment to ignore local DB)
-backend/auth.db
-
-# Obsolete features (image variants - removed)
-backend/uploads/generated/
-
-# IDE / Editors
+# IDEs and Editors
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs and temporary files
-*.log
-*.tmp
 *.swp
 *.swo
+*.swn
 *~
+*.sublime-project
+*.sublime-workspace
+.code-workspace
 
-# Node.js (if using npm for frontend tooling)
+# Operating System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary Files
+*.tmp
+*.temp
+.cache/
+.pytest_cache/
+
+# Node.js (if using for frontend tooling)
 node_modules/
+npm-debug.log
+yarn-error.log
 package-lock.json
 
-# Scripts (local environment setup)
+# Frontend Build Artifacts
+.next/
+out/
+.nuxt/
+dist/
+
+# Test Files and Documentation (production cleanup)
+test_*.py
+PRODUCTION_*.py
+*_IMPLEMENTATION.md
+test-bookings.html
+
+# Local Scripts
 set_brevo_env.ps1
+*.ps1
