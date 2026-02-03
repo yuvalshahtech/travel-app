@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 import threading
 import sib_api_v3_sdk
@@ -114,45 +115,66 @@ def send_booking_confirmation_email(
     """
     Send booking confirmation email via Brevo Transactional Email API.
 
+    CRITICAL: Dates MUST be in YYYY-MM-DD format (user-selected dates, no timezone conversion)
+    
+    Args:
+        to_email: Recipient email address
+        user_name: Guest name
+        hotel_name: Hotel name
+        check_in_date: Check-in date in YYYY-MM-DD format (REQUIRED)
+        check_out_date: Check-out date in YYYY-MM-DD format (REQUIRED)
+
     Returns True if successfully submitted to Brevo.
     Returns False and logs errors if Brevo rejects or API fails.
     """
-    # DIAGNOSTIC STEP 1: CONFIRM FUNCTION EXECUTION
+    # VALIDATION: Ensure dates are present and in correct format
+    if not check_in_date or not check_out_date:
+        error_msg = f"CRITICAL: Missing dates in booking confirmation. check_in={check_in_date}, check_out={check_out_date}"
+        logger.error(error_msg)
+        print(f"[CRITICAL ERROR] {error_msg}")
+        return False
+    
+    # VALIDATION: Dates must be strings in YYYY-MM-DD format
+    if not isinstance(check_in_date, str) or not isinstance(check_out_date, str):
+        error_msg = f"CRITICAL: Dates must be strings. Got check_in={type(check_in_date).__name__}, check_out={type(check_out_date).__name__}"
+        logger.error(error_msg)
+        print(f"[CRITICAL ERROR] {error_msg}")
+        return False
+    
+    # VALIDATION: Check date format (should be YYYY-MM-DD)
+    date_pattern = r'^\d{4}-\d{2}-\d{2}$'
+    if not re.match(date_pattern, check_in_date) or not re.match(date_pattern, check_out_date):
+        error_msg = f"CRITICAL: Dates must be in YYYY-MM-DD format. Got check_in={check_in_date}, check_out={check_out_date}"
+        logger.error(error_msg)
+        print(f"[CRITICAL ERROR] {error_msg}")
+        return False
+    
     print("\n" + "="*80)
-    print(f"[DIAGNOSTIC] Email function STARTED")
-    print(f"[DIAGNOSTIC] Thread ID: {threading.current_thread().ident}")
-    print(f"[DIAGNOSTIC] Thread Name: {threading.current_thread().name}")
-    print(f"[DIAGNOSTIC] Is Main Thread: {threading.current_thread() == threading.main_thread()}")
-    print(f"[DIAGNOSTIC] Target: {to_email}")
-    print(f"[DIAGNOSTIC] Hotel: {hotel_name}")
-    print(f"[DIAGNOSTIC] Check-in: {check_in_date}")
-    print(f"[DIAGNOSTIC] Check-out: {check_out_date}")
-    print(f"[DIAGNOSTIC] User: {user_name}")
+    print(f"[BOOKING EMAIL] Sending confirmation email")
+    print(f"[BOOKING EMAIL] Recipient: {to_email}")
+    print(f"[BOOKING EMAIL] Guest: {user_name}")
+    print(f"[BOOKING EMAIL] Hotel: {hotel_name}")
+    print(f"[BOOKING EMAIL] Check-in: {check_in_date}")
+    print(f"[BOOKING EMAIL] Check-out: {check_out_date}")
+    print(f"[BOOKING EMAIL] ✓ Dates validated - exact user-selected dates")
     print("="*80 + "\n")
     
-    logger.info(f"[DIAGNOSTIC] Email function STARTED for {to_email}")
+    logger.info(f"[BOOKING EMAIL] Sending confirmation: {to_email} | Hotel: {hotel_name} | Dates: {check_in_date} to {check_out_date}")
 
-    # DIAGNOSTIC STEP 2: ENVIRONMENT VALIDATION
-    print(f"[ENV CHECK] BREVO_API_KEY present: {bool(BREVO_API_KEY)}")
-    print(f"[ENV CHECK] BREVO_API_KEY length: {len(BREVO_API_KEY) if BREVO_API_KEY else 0}")
-    print(f"[ENV CHECK] SENDER_EMAIL: {SENDER_EMAIL}")
-    print(f"[ENV CHECK] SENDER_NAME: {SENDER_NAME}")
-    print(f"[ENV CHECK] DEV_MODE: {DEV_MODE}")
+    # ENVIRONMENT VALIDATION
+    logger.info(f"BREVO_API_KEY present: {bool(BREVO_API_KEY)}")
+    logger.info(f"SENDER_EMAIL: {SENDER_EMAIL}")
     
     if not BREVO_API_KEY:
         error_msg = "BREVO_API_KEY environment variable not set"
         logger.error(error_msg)
         print(f"[CRITICAL ERROR] {error_msg}")
-        if DEV_MODE:
-            raise ValueError(error_msg)
         return False
 
     if not SENDER_EMAIL:
         error_msg = "SENDER_EMAIL environment variable not set"
         logger.error(error_msg)
         print(f"[CRITICAL ERROR] {error_msg}")
-        if DEV_MODE:
-            raise ValueError(error_msg)
         return False
 
     safe_name = user_name.strip() or "Guest"
@@ -184,13 +206,10 @@ def send_booking_confirmation_email(
     """
 
     try:
-        print("[DIAGNOSTIC] Creating Brevo API client...")
         configuration = sib_api_v3_sdk.Configuration()
         configuration.api_key['api-key'] = BREVO_API_KEY
         api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
-        print("[DIAGNOSTIC] Brevo API client created successfully")
 
-        print(f"[DIAGNOSTIC] Building email payload...")
         send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
             to=[{"email": to_email}],
             sender={"email": SENDER_EMAIL, "name": SENDER_NAME},
@@ -198,22 +217,18 @@ def send_booking_confirmation_email(
             html_content=html_content,
             text_content=text_content
         )
-        print(f"[DIAGNOSTIC] Email payload built - From: {SENDER_EMAIL}, To: {to_email}")
 
-        print("[DIAGNOSTIC] Calling Brevo API send_transac_email()...")
         response = api_instance.send_transac_email(send_smtp_email)
-        print("[DIAGNOSTIC] Brevo API call completed")
         
         message_id = getattr(response, 'message_id', 'N/A')
         print("\n" + "="*80)
-        print(f"[SUCCESS] ✓ Email sent successfully!")
+        print(f"[SUCCESS] ✓ Booking confirmation email sent!")
         print(f"[SUCCESS] Message ID: {message_id}")
-        print(f"[SUCCESS] Recipient: {to_email}")
-        print(f"[SUCCESS] Full Response: {response}")
+        print(f"[SUCCESS] To: {to_email}")
+        print(f"[SUCCESS] Dates: {check_in_date} → {check_out_date}")
         print("="*80 + "\n")
         
-        logger.info(f"Booking confirmation email sent: {message_id}")
-        logger.info(f"Full Brevo API response: {response}")
+        logger.info(f"[SUCCESS] Booking confirmation email sent. Message ID: {message_id}")
         return True
 
     except ApiException as e:
@@ -223,27 +238,19 @@ def send_booking_confirmation_email(
             "body": getattr(e, 'body', 'unknown')
         }
         print("\n" + "="*80)
-        print(f"[BREVO API ERROR] Brevo rejected the email request")
+        print(f"[BREVO API ERROR] Failed to send booking confirmation email")
         print(f"[BREVO API ERROR] Status Code: {error_details['status']}")
         print(f"[BREVO API ERROR] Reason: {error_details['reason']}")
-        print(f"[BREVO API ERROR] Body: {error_details['body']}")
         print("="*80 + "\n")
         
-        logger.error("Brevo API exception occurred while sending booking confirmation")
-        logger.error(f"  Status code: {error_details['status']}")
+        logger.error("Brevo API error sending booking confirmation")
+        logger.error(f"  Status: {error_details['status']}")
         logger.error(f"  Reason: {error_details['reason']}")
-        logger.error(f"  Body: {error_details['body']}")
-        
-        if DEV_MODE:
-            raise  # Re-raise in dev mode to surface errors
         return False
 
     except Exception as e:
         print("\n" + "="*80)
-        print(f"[UNEXPECTED ERROR] {type(e).__name__}: {e}")
+        print(f"[ERROR] Failed to send booking confirmation: {type(e).__name__}: {e}")
         print("="*80 + "\n")
-        logger.error(f"Unexpected error sending booking confirmation: {type(e).__name__}: {e}", exc_info=True)
-        
-        if DEV_MODE:
-            raise  # Re-raise in dev mode to surface errors
+        logger.error(f"Error sending booking confirmation: {type(e).__name__}: {e}", exc_info=True)
         return False

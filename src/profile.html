@@ -470,32 +470,24 @@
             const bookingsContent = document.getElementById('bookingsContent');
             
             try {
-                // Get user ID from localStorage (assuming it's stored during login)
+                // Get user ID from localStorage
                 const userId = localStorage.getItem('userId');
                 
                 if (!userId) {
-                    // If no userId, show demo bookings for demonstration
-                    console.info('No userId found in localStorage. Showing demo bookings.');
-                    showDemoBookings();
+                    showErrorState('User not authenticated. Please log in again.');
+                    console.error('No userId found in localStorage');
                     return;
                 }
 
                 const response = await fetch(`${API_BASE}/hotels/users/${userId}/bookings`, {
                     headers: {
                         'Content-Type': 'application/json',
-                        // Add auth token if available
                         'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
                     }
                 });
 
                 if (!response.ok) {
-                    if (response.status === 404) {
-                        // API endpoint not implemented yet or no bookings found
-                        console.info('Bookings API returned 404. Showing demo bookings for demonstration.');
-                        showDemoBookings();
-                        return;
-                    }
-                    throw new Error(`HTTP ${response.status}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 const data = await response.json();
@@ -508,9 +500,8 @@
 
                 renderBookings(bookings);
             } catch (error) {
-                // For now, show demo bookings (since API may not exist yet)
-                console.info('Bookings API not available. Showing demo bookings for demonstration.', error.message);
-                showDemoBookings();
+                console.error('Failed to fetch bookings:', error.message);
+                showErrorState('Failed to load bookings. Please try again later.');
             }
         }
 
@@ -526,29 +517,16 @@
             `;
         }
 
-        function showDemoBookings() {
-            // Demo bookings for demonstration (when API doesn't exist yet)
-            const demoBookings = [
-                {
-                    id: 'BK001',
-                    hotel_name: 'Luxury Beach Resort',
-                    check_in: '2026-02-15',
-                    check_out: '2026-02-20',
-                    guests: 2,
-                    total_price: 45000,
-                    status: 'upcoming'
-                },
-                {
-                    id: 'BK002',
-                    hotel_name: 'Mountain View Hotel',
-                    check_in: '2026-01-10',
-                    check_out: '2026-01-15',
-                    guests: 4,
-                    total_price: 32000,
-                    status: 'completed'
-                }
-            ];
-            renderBookings(demoBookings);
+        function showErrorState(message) {
+            const bookingsContent = document.getElementById('bookingsContent');
+            bookingsContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <h3 class="empty-state-title">Unable to load bookings</h3>
+                    <p class="empty-state-text">${message}</p>
+                    <button onclick="location.reload()">Retry</button>
+                </div>
+            `;
         }
 
         function renderBookings(bookings) {

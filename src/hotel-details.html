@@ -1697,10 +1697,18 @@
                 actionBtn.disabled = true;
 
                 try {
+                    // Format dates as YYYY-MM-DD using local time (no UTC conversion)
+                    const formatLocalDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+
                     const payload = {
                         hotel_id: hotel.id,
-                        check_in_date: selectedStart.toISOString().slice(0, 10),
-                        check_out_date: selectedEnd.toISOString().slice(0, 10),
+                        check_in_date: formatLocalDate(selectedStart),
+                        check_out_date: formatLocalDate(selectedEnd),
                         number_of_guests: guests
                     };
 
@@ -1752,13 +1760,21 @@
                     const userName = localStorage.getItem('userName') || 'Guest';
                     const userId = parseInt(localStorage.getItem('userId')) || null;
 
+                    // Format dates as YYYY-MM-DD using local time (no UTC conversion)
+                    const formatLocalDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+
                     const bookingPayload = {
                         hotel_id: hotel.id,
                         user_email: userEmail,
                         user_name: userName,
                         user_id: userId,
-                        check_in_date: selectedStart.toISOString().slice(0, 10),
-                        check_out_date: selectedEnd.toISOString().slice(0, 10),
+                        check_in_date: formatLocalDate(selectedStart),
+                        check_out_date: formatLocalDate(selectedEnd),
                         number_of_guests: guests
                     };
 
