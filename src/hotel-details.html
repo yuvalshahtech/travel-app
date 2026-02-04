@@ -1531,16 +1531,12 @@
 
             const actionBtn = document.createElement('button');
             actionBtn.className = 'booking-button';
-            actionBtn.textContent = 'Check availability';
+            actionBtn.textContent = 'Book Now';
             actionBtn.disabled = true;
-
-            const bookBtn = document.createElement('button');
-            bookBtn.className = 'booking-button';
-            bookBtn.textContent = 'Book Now';
-            bookBtn.style.display = 'none';
 
             const messageEl = document.createElement('div');
             messageEl.className = 'availability-message';
+            messageEl.textContent = 'Select dates to continue';
 
             const priceSummary = document.createElement('div');
             priceSummary.className = 'price-summary';
@@ -1589,9 +1585,8 @@
             wrapper.appendChild(priceRow);
             wrapper.appendChild(dateField);
             wrapper.appendChild(guestField);
-            wrapper.appendChild(actionBtn);
-            wrapper.appendChild(bookBtn);
             wrapper.appendChild(messageEl);
+            wrapper.appendChild(actionBtn);
             wrapper.appendChild(priceSummary);
             wrapper.appendChild(note);
             wrapper.appendChild(confirmationCard);
@@ -1604,14 +1599,34 @@
 
             function resetAvailability() {
                 messageEl.className = 'availability-message';
-                messageEl.textContent = '';
-                bookBtn.style.display = 'none';
+                messageEl.textContent = 'Select dates to continue';
                 priceSummary.style.display = 'none';
             }
 
             function updateActionState() {
-                const ready = selectedStart && selectedEnd && guests >= 1;
-                actionBtn.disabled = !ready;
+                const ready = selectedStart && selectedEnd && selectedEnd > selectedStart && guests >= 1;
+                
+                if (ready) {
+                    // Dates and guests are valid
+                    actionBtn.disabled = false;
+                    messageEl.className = 'availability-message success';
+                    
+                    // Calculate and show price
+                    const nights = Math.max(1, Math.round((selectedEnd - selectedStart) / (1000 * 60 * 60 * 24)));
+                    const total = nights * hotel.price;
+                    priceSummary.innerHTML = `
+                        <div><strong>${nights} nights</strong> × ₹${Math.round(hotel.price).toLocaleString('en-IN')} per night</div>
+                        <div style="margin-top:6px;"><strong>Total:</strong> ₹${Math.round(total).toLocaleString('en-IN')}</div>
+                    `;
+                    priceSummary.style.display = 'block';
+                    messageEl.textContent = 'Ready to book!';
+                } else {
+                    // Invalid dates or missing selection
+                    actionBtn.disabled = true;
+                    priceSummary.style.display = 'none';
+                    messageEl.className = 'availability-message';
+                    messageEl.textContent = 'Select dates to continue';
+                }
             }
 
             function showConfirmation() {
@@ -1679,8 +1694,6 @@
             }
 
             actionBtn.addEventListener('click', async () => {
-                resetAvailability();
-
                 if (!selectedStart || !selectedEnd) {
                     messageEl.className = 'availability-message error';
                     messageEl.textContent = 'Select both check-in and check-out dates.';
@@ -1693,58 +1706,6 @@
                     return;
                 }
 
-                actionBtn.textContent = 'Checking...';
-                actionBtn.disabled = true;
-
-                try {
-                    // Format dates as YYYY-MM-DD using local time (no UTC conversion)
-                    const formatLocalDate = (date) => {
-                        const year = date.getFullYear();
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const day = String(date.getDate()).padStart(2, '0');
-                        return `${year}-${month}-${day}`;
-                    };
-
-                    const payload = {
-                        hotel_id: hotel.id,
-                        check_in_date: formatLocalDate(selectedStart),
-                        check_out_date: formatLocalDate(selectedEnd),
-                        number_of_guests: guests
-                    };
-
-                    const result = await checkHotelAvailability(payload);
-                    if (result.available) {
-                        messageEl.className = 'availability-message success';
-                        messageEl.textContent = result.message || 'Available for your dates.';
-
-                        const nights = Math.max(1, Math.round((selectedEnd - selectedStart) / (1000 * 60 * 60 * 24)));
-                        const total = nights * hotel.price;
-                        priceSummary.innerHTML = `
-                            <div><strong>${nights} nights</strong> × ₹${Math.round(hotel.price).toLocaleString('en-IN')} per night</div>
-                            <div style="margin-top:6px;"><strong>Total:</strong> ₹${Math.round(total).toLocaleString('en-IN')}</div>
-                        `;
-                        priceSummary.style.display = 'block';
-                        bookBtn.style.display = 'block';
-                    } else {
-                        messageEl.className = 'availability-message error';
-                        messageEl.textContent = result.message || 'Hotel is unavailable for selected dates.';
-                    }
-                } catch (error) {
-                    messageEl.className = 'availability-message error';
-                    messageEl.textContent = 'Unable to check availability. Please retry.';
-                } finally {
-                    actionBtn.textContent = 'Check availability';
-                    updateActionState();
-                }
-            });
-
-            bookBtn.addEventListener('click', async () => {
-                if (!selectedStart || !selectedEnd || guests < 1) {
-                    messageEl.className = 'availability-message error';
-                    messageEl.textContent = 'Select dates and guests before booking.';
-                    return;
-                }
-
                 // Validate that selected dates don't fall in blocked ranges
                 if (isRangeBlocked(selectedStart, selectedEnd)) {
                     messageEl.className = 'availability-message error';
@@ -1752,8 +1713,8 @@
                     return;
                 }
 
-                bookBtn.textContent = 'Processing...';
-                bookBtn.disabled = true;
+                actionBtn.textContent = 'Processing...';
+                actionBtn.disabled = true;
 
                 try {
                     // Get JWT token for authentication (NEVER send userId/email in payload)
@@ -1776,7 +1737,7 @@
                     };
 
                     // PRODUCTION RULE: Only send booking details, NOT user identity
-                    // Backend derives user_id from JWT token
+                    // Backend derives user_id from JWT token and validates availability as safety check
                     const bookingPayload = {
                         hotel_id: hotel.id,
                         check_in_date: formatLocalDate(selectedStart),
@@ -1803,8 +1764,8 @@
                     
                     messageEl.className = 'availability-message error';
                     messageEl.textContent = `Booking failed: ${error.message}`;
-                    bookBtn.textContent = 'Book Now';
-                    bookBtn.disabled = false;
+                    actionBtn.textContent = 'Book Now';
+                    updateActionState();
                 }
             });
         }
