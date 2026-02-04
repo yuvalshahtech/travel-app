@@ -1756,9 +1756,16 @@
                 bookBtn.disabled = true;
 
                 try {
-                    const userEmail = localStorage.getItem('userEmail');
-                    const userName = localStorage.getItem('userName') || 'Guest';
-                    const userId = parseInt(localStorage.getItem('userId')) || null;
+                    // Get JWT token for authentication (NEVER send userId/email in payload)
+                    const authToken = localStorage.getItem('authToken');
+                    
+                    if (!authToken) {
+                        showMessage('Please log in to make a booking', 'error');
+                        setTimeout(() => {
+                            window.location.href = 'login.html';
+                        }, 2000);
+                        return;
+                    }
 
                     // Format dates as YYYY-MM-DD using local time (no UTC conversion)
                     const formatLocalDate = (date) => {
@@ -1768,24 +1775,32 @@
                         return `${year}-${month}-${day}`;
                     };
 
+                    // PRODUCTION RULE: Only send booking details, NOT user identity
+                    // Backend derives user_id from JWT token
                     const bookingPayload = {
                         hotel_id: hotel.id,
-                        user_email: userEmail,
-                        user_name: userName,
-                        user_id: userId,
                         check_in_date: formatLocalDate(selectedStart),
                         check_out_date: formatLocalDate(selectedEnd),
                         number_of_guests: guests
                     };
 
                     console.log('[BOOKING] Sending booking request:', bookingPayload);
-                    const result = await createBooking(bookingPayload);
+                    const result = await createBooking(bookingPayload, authToken);
                     console.log('[BOOKING] Response:', result);
 
                     // Show confirmation card instead of just a message
                     showConfirmation();
                 } catch (error) {
                     console.error('[BOOKING ERROR]', error);
+                    
+                    // Check if error is due to authentication
+                    if (error.message.includes('session has expired') || error.message.includes('log in')) {
+                        localStorage.clear();
+                        setTimeout(() => {
+                            window.location.href = 'login.html';
+                        }, 2000);
+                    }
+                    
                     messageEl.className = 'availability-message error';
                     messageEl.textContent = `Booking failed: ${error.message}`;
                     bookBtn.textContent = 'Book Now';

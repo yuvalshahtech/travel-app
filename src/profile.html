@@ -443,66 +443,239 @@
     <script type="module">
         import { API_BASE } from './services/api.js';
 
-        // Get logged-in user info
-        const userEmail = localStorage.getItem('userEmail');
-        
-        // Redirect to login if not logged in
-        if (!userEmail) {
-            window.location.href = 'login.html';
+        // PRODUCTION RULE: Authentication is JWT-only
+        // Decode JWT for userId/email; never use localStorage userId
+
+        function parseJwt(token) {
+            try {
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    return null;
+                }
+                let payload = parts[1]
+                    .replace(/-/g, '+')
+                    .replace(/_/g, '/');
+                while (payload.length % 4 !== 0) {
+                    payload += '=';
+                }
+                const decoded = JSON.parse(atob(payload));
+                return decoded;
+            } catch (error) {
+                console.warn('[AUTH] Invalid JWT token format');
+                return null;
+            }
         }
 
-        // Display user info
-        document.getElementById('userEmail').textContent = userEmail;
+        // PRODUCTION RULE: Authentication determined ONCE at page load
+        // Based on authToken presence ONLY
+        // Bookings API failures NEVER trigger logout
         
-        // Extract name from email (before @) and capitalize
-        const userName = userEmail.split('@')[0]
-            .split('.')
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(' ');
-        
-        document.getElementById('userName').textContent = userName;
-        
-        // Set avatar initial (first letter of name)
-        document.getElementById('profileAvatar').textContent = userName.charAt(0).toUpperCase();
+        // DEBUG: Test authentication on page load
+        function testAuth() {
+            const authToken = localStorage.getItem('authToken');
+            console.log('=== AUTH DEBUG ===');
+            console.log('authToken from localStorage:', !!authToken);
+            if (authToken) {
+                console.log('Token preview (first 50 chars):', authToken.substring(0, 50));
+                console.log('Token preview (last 50 chars):', authToken.substring(authToken.length - 50));
+                const decoded = tryDecodeJwt(authToken);
+                console.log('Decoded JWT:', decoded);
+            }
+        }
 
-        // Fetch booking history
-        async function fetchBookingHistory() {
+        // Call test at page start
+        testAuth();
+
+        function getAuthToken() {
+            const authToken = localStorage.getItem('authToken');
+            return authToken;
+        }
+
+        function tryDecodeJwt(token) {
+            // Best-effort JWT decode for display purposes
+            // Failure does NOT affect authentication status
+            try {
+                const payload = parseJwt(token);
+                if (payload && payload.sub) {
+                    return payload;
+                }
+                return null;
+            } catch (error) {
+                console.warn('[AUTH] Could not decode JWT for display:', error.message);
+                return null;
+            }
+        }
+
+        // STEP 1: Check authentication (runs once at page load)
+        // Returns true if authToken exists, false otherwise
+        function checkAuthentication() {
+            const authToken = getAuthToken();
+            if (!authToken) {
+                console.warn('[AUTH] No authToken in localStorage - user not authenticated');
+                redirectToLogin('Please log in to view your bookings.');
+                return false;
+            }
+            return true;
+        }
+
+        // STEP 2: Initialize page if authenticated
+        // Display user info from JWT, then load bookings
+        async function initializeAuthenticatedPage() {
+            const authToken = getAuthToken();
+            
+            // Try to decode JWT for user info (non-critical)
+            const payload = tryDecodeJwt(authToken);
+            
+            // Display profile immediately (with fallback if decode fails)
+            if (payload && payload.email) {
+                displayUserInfo(payload);
+            } else {
+                displayUserInfo({ email: 'Authenticated User', sub: null });
+            }
+
+            // Load bookings asynchronously (failures are non-critical)
+            await loadBookings(authToken, payload);
+        }
+
+        // STEP 3: Load bookings (API failures do NOT cause logout)
+        async function loadBookings(authToken, payload) {
             const bookingsContent = document.getElementById('bookingsContent');
             
             try {
-                // Get user ID from localStorage
-                const userId = localStorage.getItem('userId');
+                // Extract userId from JWT for endpoint call
+                let userId = payload ? payload.sub : null;
                 
                 if (!userId) {
-                    showErrorState('User not authenticated. Please log in again.');
-                    console.error('No userId found in localStorage');
+                    console.warn('[BOOKINGS] Could not extract userId from JWT, using fallback');
+                    userId = 'current';
+                }
+
+                // DEBUG: Log request details
+                console.log('[BOOKINGS] Sending request:');
+                console.log(`  URL: ${API_BASE}/hotels/users/${userId}/bookings`);
+                console.log(`  authToken exists: ${!!authToken}`);
+                if (authToken) {
+                    console.log(`  authToken length: ${authToken.length}`);
+                    console.log(`  authToken starts with "eyJ": ${authToken.startsWith('eyJ')}`);
+                    console.log(`  authToken has 3 parts (JWT): ${(authToken.match(/\./g) || []).length === 2}`);
+                    console.log(`  Full authToken: ${authToken}`);
+                }
+                console.log(`  Authorization header will be: "Bearer ${authToken ? authToken.substring(0, 30) + '...' : 'MISSING'}"`);
+                console.log(`  userId: ${userId}`);
+
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                };
+                console.log('[BOOKINGS] Headers being sent:', headers);
+
+                const response = await fetch(`${API_BASE}/hotels/users/${userId}/bookings`, {
+                    headers: headers
+                });
+                
+                console.log(`[BOOKINGS] Response status: ${response.status}`);
+                console.log(`[BOOKINGS] Response headers:`, response.headers);
+                if (response.status === 401) {
+                    const errorText = await response.text();
+                    console.log('[BOOKINGS] 401 Response body:', errorText);
+                }
+
+                // API failure responses are non-critical
+                // User remains authenticated even if bookings API fails
+                if (response.status === 401 || response.status === 403) {
+                    console.warn(`[BOOKINGS] API returned ${response.status} - showing error inline (NOT logging out)`);
+                    showBookingsError('Unable to load bookings. Please try again.');
                     return;
                 }
 
-                const response = await fetch(`${API_BASE}/hotels/users/${userId}/bookings`, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-                    }
-                });
-
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    console.warn(`[BOOKINGS] HTTP ${response.status}: ${response.statusText}`);
+                    showBookingsError('Unable to load bookings. Please try again.');
+                    return;
                 }
 
                 const data = await response.json();
-                const bookings = data.bookings || data;  // Handle both {bookings: [...]} and [...] formats
+                const bookings = data.bookings || [];
                 
-                if (!bookings || bookings.length === 0) {
+                // PRODUCTION RULE: Show ONLY real database data (NO demo/sample/fallback)
+                if (bookings.length === 0) {
                     showEmptyState();
                     return;
                 }
 
                 renderBookings(bookings);
             } catch (error) {
-                console.error('Failed to fetch bookings:', error.message);
-                showErrorState('Failed to load bookings. Please try again later.');
+                console.error('[BOOKINGS] Network or parsing error:', error.message);
+                showBookingsError('Unable to load bookings. Please try again.');
             }
+        }
+
+        function displayUserInfo(payload) {
+            // Handle partial payload (from JWT decode) gracefully
+            const userEmail = payload && payload.email ? payload.email : 'Authenticated User';
+            document.getElementById('userEmail').textContent = userEmail;
+            
+            const userName = userEmail && userEmail.includes('@')
+                ? userEmail.split('@')[0]
+                    .split('.')
+                    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join(' ')
+                : 'User';
+            
+            document.getElementById('userName').textContent = userName;
+            document.getElementById('profileAvatar').textContent = userName.charAt(0).toUpperCase();
+        }
+
+        function redirectToLogin(message) {
+            const bookingsContent = document.getElementById('bookingsContent');
+            bookingsContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔒</div>
+                    <h3 class="empty-state-title">Please log in</h3>
+                    <p class="empty-state-text">${message || 'You need to be logged in to view your bookings.'}</p>
+                    <button onclick="window.location.href='login.html'">Go to Login</button>
+                </div>
+            `;
+            
+            // Update profile header
+            document.getElementById('userName').textContent = 'Not Logged In';
+            document.getElementById('userEmail').textContent = 'Please log in to continue';
+            document.getElementById('profileAvatar').textContent = '?';
+            
+            // Clear invalid/expired tokens
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Redirect to login to enforce re-auth
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1200);
+        }
+
+        function showNotLoggedIn(message) {
+            const bookingsContent = document.getElementById('bookingsContent');
+            bookingsContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔒</div>
+                    <h3 class="empty-state-title">Please log in</h3>
+                    <p class="empty-state-text">${message || 'You need to be logged in to view your bookings.'}</p>
+                    <button onclick="window.location.href='login.html'">Go to Login</button>
+                </div>
+            `;
+            
+            // Update profile header
+            document.getElementById('userName').textContent = 'Not Logged In';
+            document.getElementById('userEmail').textContent = 'Please log in to continue';
+            document.getElementById('profileAvatar').textContent = '?';
+            
+            // Clear invalid/expired tokens
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Redirect to login to enforce re-auth
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1200);
         }
 
         function showEmptyState() {
@@ -513,6 +686,19 @@
                     <h3 class="empty-state-title">You have no bookings yet</h3>
                     <p class="empty-state-text">Start exploring hotels and make your first booking!</p>
                     <button onclick="window.location.href='home.html'">Browse Hotels</button>
+                </div>
+            `;
+        }
+
+        function showBookingsError(message) {
+            // Bookings API error - show inline error, DON'T redirect or logout
+            const bookingsContent = document.getElementById('bookingsContent');
+            bookingsContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <h3 class="empty-state-title">Unable to load bookings</h3>
+                    <p class="empty-state-text">${message || 'Failed to load your bookings. Please try again later.'}</p>
+                    <button onclick="location.reload()">Retry</button>
                 </div>
             `;
         }
@@ -652,9 +838,11 @@
             function handleConfirm() {
                 hideLogoutModal();
                 cleanup();
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('userId');
-                localStorage.removeItem('authToken');
+                
+                // SECURITY: Clear ALL client-side data on logout
+                localStorage.clear();
+                sessionStorage.clear();
+                
                 window.location.href = 'login.html';
             }
             
@@ -683,7 +871,12 @@
         }
 
         // Initialize page
-        fetchBookingHistory();
+        // Step 1: Check authentication (based on authToken presence only)
+        // Step 2: If authenticated, initialize page and load bookings
+        // Step 3: If not authenticated, redirect to login
+        if (checkAuthentication()) {
+            initializeAuthenticatedPage();
+        }
     </script>
 </body>
 </html>

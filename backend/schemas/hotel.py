@@ -33,10 +33,13 @@ class AvailabilityResponse(BaseModel):
     message: str
 
 class BookingRequest(BaseModel):
+    """
+    Booking request payload.
+    
+    SECURITY: user_id, user_email, user_name are derived from JWT token,
+    NOT from frontend payload. Only booking details are accepted.
+    """
     hotel_id: int
-    user_email: EmailStr
-    user_name: str
-    user_id: int | None = None  # Optional for backwards compatibility
     check_in_date: date
     check_out_date: date
     number_of_guests: int

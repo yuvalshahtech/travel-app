@@ -129,16 +129,30 @@ export async function checkHotelAvailability(payload) {
 
 /**
  * Create a booking and trigger confirmation email
+ * @param {Object} payload - Booking details (hotel_id, check_in_date, check_out_date, number_of_guests)
+ * @param {string} authToken - JWT authentication token
  */
-export async function createBooking(payload) {
+export async function createBooking(payload, authToken) {
   try {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Add Authorization header if token provided
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    
     const response = await fetch(`${API_BASE}/hotels/bookings`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: headers,
       body: JSON.stringify(payload)
     });
+    
+    if (response.status === 401) {
+      throw new Error('Your session has expired. Please log in again.');
+    }
+    
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(errorText || `HTTP ${response.status}`);

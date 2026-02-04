@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Depends
 from datetime import date
 from pathlib import Path
 import random
@@ -21,9 +21,11 @@ from backend.utils.database import (
     create_booking,
     get_hotel_bookings,
     merge_date_ranges,
-    get_user_bookings
+    get_user_bookings,
+    get_user_by_id
 )
 from backend.utils.email import send_booking_confirmation_email
+from backend.utils.jwt_auth import get_current_user_id
 
 router = APIRouter(prefix="/hotels", tags=["hotels"])
 
@@ -376,8 +378,27 @@ async def check_availability(payload: AvailabilityRequest):
     return {"available": True, "message": "Hotel is available for your dates."}
 
 @router.post("/bookings", response_model=BookingResponse)
-async def create_booking_endpoint(payload: BookingRequest):
-    """Create a booking and send confirmation email"""
+async def create_booking_endpoint(
+    payload: BookingRequest,
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Create a booking and send confirmation email.
+    
+    SECURITY: User identity is derived from JWT token ONLY.
+    Frontend sends only booking details (hotel_id, dates, guests).
+    Backend extracts user_id from authenticated token.
+    
+    Authentication: Required (JWT token in Authorization header)
+    """
+    # Get user details from database using authenticated user_id
+    user = get_user_by_id(current_user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    user_email = user["email"]
+    user_name = user_email.split('@')[0].title()  # Extract name from email
+    
     hotel = get_hotel_by_id(payload.hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
@@ -407,13 +428,14 @@ async def create_booking_endpoint(payload: BookingRequest):
     num_nights = (payload.check_out_date - payload.check_in_date).days
     total_price = float(hotel["price"]) * num_nights if hotel["price"] else 0
 
+    # Create booking with user_id from JWT token (NOT from payload)
     booking_id = create_booking(
         payload.hotel_id,
         payload.check_in_date.isoformat(),
         payload.check_out_date.isoformat(),
         payload.number_of_guests,
         status="confirmed",
-        user_id=payload.user_id,
+        user_id=current_user_id,  # From JWT token
         price=total_price
     )
 
@@ -421,14 +443,14 @@ async def create_booking_endpoint(payload: BookingRequest):
     # This proves whether the email function works at all
     print("\n[DIAGNOSTIC] About to call email function DIRECTLY (no threading)")
     print(f"[DIAGNOSTIC] Booking ID: {booking_id}")
-    print(f"[DIAGNOSTIC] User email: {payload.user_email}")
-    print(f"[DIAGNOSTIC] User name: {payload.user_name}")
+    print(f"[DIAGNOSTIC] User email: {user_email}")
+    print(f"[DIAGNOSTIC] User name: {user_name}")
     print(f"[DIAGNOSTIC] Hotel name: {hotel['name']}")
     
     try:
         email_result = send_booking_confirmation_email(
-            payload.user_email,
-            payload.user_name,
+            user_email,  # From JWT authenticated user
+            user_name,   # Derived from email
             hotel["name"],
             payload.check_in_date.isoformat(),
             payload.check_out_date.isoformat()
@@ -504,8 +526,80 @@ def get_blocked_dates(hotel_id: int):
         "blocked_dates": blocked_dates
     }
 
+@router.get("/bookings/my", response_model=UserBookingListResponse)
+def get_my_booking_history(current_user_id: int = Depends(get_current_user_id)):
+    """
+    Get all bookings for the currently authenticated user.
+    
+    SECURITY: User identity is derived from JWT token ONLY.
+    Frontend cannot manipulate or access other users' bookings.
+    
+    Returns booking history with calculated status (upcoming/completed/cancelled)
+    and total price based on nightly rate and number of nights.
+    
+    Authentication: Required (JWT token in Authorization header)
+    
+    Returns:
+        UserBookingListResponse with list of user's bookings
+    """
+    from datetime import datetime
+    
+    # Get bookings for the AUTHENTICATED user only
+    # current_user_id comes from JWT token, not from frontend
+    bookings = get_user_bookings(current_user_id)
+    
+    # Transform database records into UserBooking response format
+    user_bookings = []
+    today = datetime.now().date()
+    
+    for booking in bookings:
+        # Parse dates
+        check_in = datetime.strptime(booking["check_in_date"], "%Y-%m-%d").date()
+        check_out = datetime.strptime(booking["check_out_date"], "%Y-%m-%d").date()
+        
+        # Calculate number of nights
+        num_nights = (check_out - check_in).days
+        
+        # Calculate total price
+        # Use booking price if stored, otherwise calculate from hotel nightly rate
+        try:
+            if booking["price"] is not None:
+                total_price = float(booking["price"])
+            else:
+                hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+                total_price = hotel_nightly_rate * num_nights
+        except (KeyError, TypeError):
+            hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+            total_price = hotel_nightly_rate * num_nights
+        
+        # Determine status
+        # If booking has explicit status and it's cancelled, use that
+        # Otherwise, determine based on check-in date
+        if booking["status"] == "cancelled":
+            status = "cancelled"
+        elif check_in > today:
+            status = "upcoming"
+        else:
+            status = "completed"
+        
+        user_bookings.append(UserBooking(
+            id=str(booking["booking_id"]),
+            hotel_id=booking["hotel_id"],
+            hotel_name=booking["hotel_name"],
+            check_in=booking["check_in_date"],
+            check_out=booking["check_out_date"],
+            guests=booking["guests"],
+            total_price=total_price,
+            status=status
+        ))
+    
+    return UserBookingListResponse(bookings=user_bookings)
+
 @router.get("/users/{user_id}/bookings", response_model=UserBookingListResponse)
-def get_user_booking_history(user_id: int):
+def get_user_booking_history(
+    user_id: int,
+    current_user_id: int = Depends(get_current_user_id)
+):
     """
     Get all bookings for a specific user with hotel details.
     
@@ -514,8 +608,12 @@ def get_user_booking_history(user_id: int):
     """
     from datetime import datetime, timedelta
     
+    # Enforce account isolation (user_id must match authenticated user)
+    if user_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Forbidden: user mismatch")
+
     # Get user bookings from database
-    bookings = get_user_bookings(user_id)
+    bookings = get_user_bookings(current_user_id)
     
     # Transform database records into UserBooking response format
     user_bookings = []

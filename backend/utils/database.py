@@ -128,6 +128,15 @@ def get_user_by_email(email):
     conn.close()
     return user
 
+def get_user_by_id(user_id):
+    """Get user by ID"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
 def create_user(email, password_hash):
     """Create a new user"""
     conn = get_db_connection()
