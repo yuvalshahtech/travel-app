@@ -690,169 +690,6 @@
             color: #111;
         }
 
-        /* Price Breakdown Styles */
-        .price-breakdown-card {
-            background: white;
-            border: 1px solid #e9e9e9;
-            border-radius: 10px;
-            padding: 14px;
-            margin-top: 12px;
-            display: none;
-        }
-
-        .price-breakdown-card.visible {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .breakdown-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-            padding: 8px 0;
-        }
-
-        .breakdown-header:hover {
-            opacity: 0.8;
-        }
-
-        .breakdown-toggle {
-            font-size: 18px;
-            transition: transform 0.2s ease;
-            color: #666;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .breakdown-toggle.open {
-            transform: rotate(180deg);
-        }
-
-        .breakdown-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: #444;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-        }
-
-        .breakdown-total {
-            font-size: 15px;
-            font-weight: 700;
-            color: #222;
-        }
-
-        .breakdown-details {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .breakdown-details.open {
-            max-height: 500px;
-        }
-
-        .breakdown-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 10px 0;
-            border-top: 1px solid #f0f0f0;
-            font-size: 13px;
-            gap: 12px;
-        }
-
-        .breakdown-item:first-child {
-            border-top: none;
-            padding-top: 12px;
-        }
-
-        .breakdown-label {
-            flex: 1;
-            color: #555;
-        }
-
-        .breakdown-label-main {
-            font-weight: 600;
-            color: #333;
-            display: block;
-            margin-bottom: 2px;
-        }
-
-        .breakdown-label-sub {
-            font-size: 11px;
-            color: #888;
-            margin-top: 2px;
-            display: block;
-            line-height: 1.3;
-        }
-
-        .breakdown-value {
-            text-align: right;
-            font-weight: 600;
-            color: #222;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .breakdown-separator {
-            height: 1px;
-            background: #e9e9e9;
-            margin: 8px 0;
-        }
-
-        .breakdown-total-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            margin-top: 4px;
-            border-top: 2px solid #e9e9e9;
-        }
-
-        .breakdown-total-label {
-            font-size: 14px;
-            font-weight: 700;
-            color: #222;
-        }
-
-        .breakdown-total-value {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--brand-red);
-        }
-
-        .breakdown-trust-signal {
-            background: #ecfdf3;
-            border: 1px solid #abefc6;
-            border-radius: 8px;
-            padding: 10px 12px;
-            margin-top: 12px;
-            font-size: 12px;
-            color: #027a48;
-            line-height: 1.4;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .breakdown-trust-icon {
-            margin-right: 4px;
-        }
-
         .booking-button[disabled] {
             background: #ddd;
             cursor: not-allowed;
@@ -863,6 +700,225 @@
             padding: 14px;
             font-size: 16px;
             font-weight: 600;
+        }
+
+        /* E-Bill Modal Styles */
+        .ebill-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .ebill-modal-overlay.visible {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .ebill-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .ebill-header {
+            text-align: center;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 16px;
+        }
+
+        .ebill-header-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 4px;
+        }
+
+        .ebill-header-subtitle {
+            font-size: 13px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ebill-property {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--brand-red);
+            margin-top: 8px;
+        }
+
+        .ebill-details {
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .ebill-detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            font-size: 14px;
+            border-bottom: 1px solid #e9e9e9;
+        }
+
+        .ebill-detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .ebill-detail-label {
+            color: #555;
+            font-weight: 500;
+        }
+
+        .ebill-detail-value {
+            color: #222;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .ebill-info-tooltip {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: var(--brand-red);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 16px;
+            font-size: 11px;
+            cursor: help;
+            margin-left: 6px;
+            position: relative;
+        }
+
+        .ebill-info-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+            font-weight: 400;
+        }
+
+        .ebill-divider {
+            height: 2px;
+            background: #d90429;
+            margin: 16px 0;
+        }
+
+        .ebill-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #222;
+        }
+
+        .ebill-total-amount {
+            color: var(--brand-red);
+            font-size: 22px;
+        }
+
+        .ebill-trust-signal {
+            background: #ecfdf3;
+            border-left: 4px solid #027a48;
+            padding: 14px;
+            border-radius: 6px;
+            margin: 20px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .ebill-trust-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .ebill-trust-text {
+            font-size: 13px;
+            color: #027a48;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+
+        .ebill-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .ebill-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ebill-btn-primary {
+            background-color: var(--brand-red);
+            color: white;
+        }
+
+        .ebill-btn-primary:hover {
+            background-color: var(--brand-red-dark);
+            transform: translateY(-1px);
+        }
+
+        .ebill-btn-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #d0d0d0;
+        }
+
+        .ebill-btn-secondary:hover {
+            background-color: #e8e8e8;
         }
 
         /* Confirmation Card */
@@ -1849,10 +1905,6 @@
             const priceSummary = document.createElement('div');
             priceSummary.className = 'price-summary';
 
-            // Price Breakdown Card Component
-            const priceBreakdownCard = document.createElement('div');
-            priceBreakdownCard.className = 'price-breakdown-card';
-
             const note = document.createElement('p');
             note.style.marginTop = '4px';
             note.style.color = '#888';
@@ -1900,12 +1952,144 @@
             wrapper.appendChild(messageEl);
             wrapper.appendChild(actionBtn);
             wrapper.appendChild(priceSummary);
-            wrapper.appendChild(priceBreakdownCard);
             wrapper.appendChild(note);
             container.appendChild(wrapper);
             
             // CRITICAL: Append confirmation card OUTSIDE wrapper so it's not hidden when wrapper is hidden
             container.appendChild(confirmationCard);
+
+            // ==================== E-BILL MODAL CREATION ====================
+            const eBillModalOverlay = document.createElement('div');
+            eBillModalOverlay.className = 'ebill-modal-overlay';
+
+            const eBillModal = document.createElement('div');
+            eBillModal.className = 'ebill-modal';
+            eBillModal.innerHTML = `
+                <div class="ebill-header">
+                    <div class="ebill-header-title">Price Summary</div>
+                    <div class="ebill-header-subtitle">Invoice</div>
+                    <div class="ebill-property" id="eBillHotelName"></div>
+                </div>
+                
+                <div class="ebill-details">
+                    <div class="ebill-detail-row">
+                        <span class="ebill-detail-label">Check-in Date <span class="ebill-info-tooltip" data-tooltip="Your arrival date">?</span></span>
+                        <span class="ebill-detail-value" id="eBillCheckIn">--</span>
+                    </div>
+                    <div class="ebill-detail-row">
+                        <span class="ebill-detail-label">Check-out Date <span class="ebill-info-tooltip" data-tooltip="Your departure date">?</span></span>
+                        <span class="ebill-detail-value" id="eBillCheckOut">--</span>
+                    </div>
+                    <div class="ebill-detail-row">
+                        <span class="ebill-detail-label">Nights</span>
+                        <span class="ebill-detail-value" id="eBillNights">--</span>
+                    </div>
+                    <div class="ebill-detail-row">
+                        <span class="ebill-detail-label">Guests</span>
+                        <span class="ebill-detail-value" id="eBillGuests">--</span>
+                    </div>
+                </div>
+
+                <div class="ebill-details">
+                    <div class="ebill-detail-row">
+                        <span class="ebill-detail-label">Base Price (per night) <span class="ebill-info-tooltip" data-tooltip="Nightly room rate">?</span></span>
+                        <span class="ebill-detail-value" id="eBillBasePerNight">₹--</span>
+                    </div>
+                    <div class="ebill-detail-row">
+                        <span class="ebill-detail-label">Room Charges <span class="ebill-info-tooltip" data-tooltip="Base price × number of nights">?</span></span>
+                        <span class="ebill-detail-value" id="eBillRoomCharges">₹--</span>
+                    </div>
+                    <div class="ebill-detail-row">
+                        <span class="ebill-detail-label">Cleaning Fee <span class="ebill-info-tooltip" data-tooltip="One-time cleaning charge">?</span></span>
+                        <span class="ebill-detail-value" id="eBillCleaningFee">₹--</span>
+                    </div>
+                    <div class="ebill-detail-row">
+                        <span class="ebill-detail-label">Platform Service Fee <span class="ebill-info-tooltip" data-tooltip="Supports booking platform operations">?</span></span>
+                        <span class="ebill-detail-value" id="eBillServiceFee">₹--</span>
+                    </div>
+                    <div class="ebill-detail-row">
+                        <span class="ebill-detail-label">GST (18%) <span class="ebill-info-tooltip" data-tooltip="Government tax">?</span></span>
+                        <span class="ebill-detail-value" id="eBillGST">₹--</span>
+                    </div>
+                </div>
+
+                <div class="ebill-divider"></div>
+
+                <div class="ebill-total-row">
+                    <span>Total Amount</span>
+                    <span class="ebill-total-amount" id="eBillTotalAmount">₹--</span>
+                </div>
+
+                <div class="ebill-trust-signal">
+                    <div class="ebill-trust-icon">✔</div>
+                    <div class="ebill-trust-text">
+                        <strong>No hidden charges</strong><br>
+                        This is the final amount. No extra fees will be charged at checkout.
+                    </div>
+                </div>
+
+                <div class="ebill-actions">
+                    <button class="ebill-btn ebill-btn-secondary" id="eBillEditBtn">Edit Dates</button>
+                    <button class="ebill-btn ebill-btn-primary" id="eBillConfirmBtn">Confirm & Book</button>
+                </div>
+            `;
+
+            eBillModalOverlay.appendChild(eBillModal);
+            container.appendChild(eBillModalOverlay);
+            
+            // ==================== E-BILL PRICE CALCULATION ====================
+            function formatCurrency(amount) {
+                return '₹' + Math.round(amount).toLocaleString('en-IN');
+            }
+
+            function formatDate(date) {
+                const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                return date.toLocaleDateString('en-IN', options);
+            }
+
+            function calculateBreakdown(pricePerNight, nights) {
+                const roomCharges = pricePerNight * nights;
+                const cleaningFee = 500; // Fixed cleaning fee
+                const subtotal = roomCharges + cleaningFee;
+                const platformFee = subtotal * 0.10; // 10% platform service fee
+                const subtotalBeforeGST = subtotal + platformFee;
+                const gst = subtotalBeforeGST * 0.18; // 18% GST
+                const total = subtotal + platformFee + gst;
+
+                return {
+                    roomCharges: Math.round(roomCharges),
+                    cleaningFee: Math.round(cleaningFee),
+                    platformFee: Math.round(platformFee),
+                    gst: Math.round(gst),
+                    total: Math.round(total)
+                };
+            }
+
+            function showEBill() {
+                // Populate E-Bill with booking details
+                const nights = Math.max(1, Math.round((selectedEnd - selectedStart) / (1000 * 60 * 60 * 24)));
+                const breakdown = calculateBreakdown(hotel.price, nights);
+
+                document.getElementById('eBillHotelName').textContent = hotel.name;
+                document.getElementById('eBillCheckIn').textContent = formatDate(selectedStart);
+                document.getElementById('eBillCheckOut').textContent = formatDate(selectedEnd);
+                document.getElementById('eBillNights').textContent = `${nights} night${nights > 1 ? 's' : ''}`;
+                document.getElementById('eBillGuests').textContent = guests;
+
+                document.getElementById('eBillBasePerNight').textContent = formatCurrency(hotel.price);
+                document.getElementById('eBillRoomCharges').textContent = formatCurrency(breakdown.roomCharges);
+                document.getElementById('eBillCleaningFee').textContent = formatCurrency(breakdown.cleaningFee);
+                document.getElementById('eBillServiceFee').textContent = formatCurrency(breakdown.platformFee);
+                document.getElementById('eBillGST').textContent = formatCurrency(breakdown.gst);
+                document.getElementById('eBillTotalAmount').textContent = formatCurrency(breakdown.total);
+
+                // Show the modal
+                eBillModalOverlay.classList.add('visible');
+            }
+
+            function hideEBill() {
+                eBillModalOverlay.classList.remove('visible');
+            }
 
             let selectedStart = null;
             let selectedEnd = null;
@@ -1917,106 +2101,6 @@
                 messageEl.className = 'availability-message';
                 messageEl.textContent = 'Select dates to continue';
                 priceSummary.style.display = 'none';
-                priceBreakdownCard.style.display = 'none';
-            }
-
-            // Price breakdown configuration
-            const FEES = {
-                platformMaintenance: { base: 0, percent: 2, min: 0 },
-                hostSupport: { base: 0, percent: 2, min: 0 },
-                taxRate: 0.05 // 5% tax
-            };
-
-            // Calculate price breakdown components
-            function calculateBreakdown(basePrice, nights) {
-                const baseStayPrice = basePrice * nights;
-                const platformFee = Math.max(0, baseStayPrice * (FEES.platformMaintenance.percent / 100));
-                const hostSupportFee = Math.max(0, baseStayPrice * (FEES.hostSupport.percent / 100));
-                const subtotalBeforeTax = baseStayPrice + platformFee + hostSupportFee;
-                const taxAmount = subtotalBeforeTax * FEES.taxRate;
-                const total = baseStayPrice + platformFee + hostSupportFee + taxAmount;
-
-                return {
-                    baseStayPrice: Math.round(baseStayPrice),
-                    platformFee: Math.round(platformFee),
-                    hostSupportFee: Math.round(hostSupportFee),
-                    taxAmount: Math.round(taxAmount),
-                    total: Math.round(total),
-                    nights: nights,
-                    pricePerNight: Math.round(basePrice)
-                };
-            }
-
-            // Render price breakdown card
-            function renderPriceBreakdown(breakdown) {
-                const isExpanded = priceBreakdownCard.classList.contains('visible');
-                
-                priceBreakdownCard.innerHTML = `
-                    <div class="breakdown-header">
-                        <div>
-                            <div class="breakdown-title">Price Breakdown</div>
-                            <div class="breakdown-total">₹${breakdown.total.toLocaleString('en-IN')}</div>
-                        </div>
-                        <div class="breakdown-toggle ${isExpanded ? 'open' : ''}">▼</div>
-                    </div>
-                    <div class="breakdown-details ${isExpanded ? 'open' : ''}">
-                        <div class="breakdown-item">
-                            <div class="breakdown-label">
-                                <span class="breakdown-label-main">Base Stay Price</span>
-                                <span class="breakdown-label-sub">₹${breakdown.pricePerNight.toLocaleString('en-IN')} × ${breakdown.nights} night${breakdown.nights > 1 ? 's' : ''} = ₹${breakdown.baseStayPrice.toLocaleString('en-IN')}</span>
-                                <span class="breakdown-label-sub" style="margin-top: 3px; color: #666;">The actual cost of the room</span>
-                            </div>
-                            <div class="breakdown-value">₹${breakdown.baseStayPrice.toLocaleString('en-IN')}</div>
-                        </div>
-                        
-                        <div class="breakdown-item">
-                            <div class="breakdown-label">
-                                <span class="breakdown-label-main">Platform Maintenance Fee</span>
-                                <span class="breakdown-label-sub">2% of base stay price</span>
-                                <span class="breakdown-label-sub" style="margin-top: 3px; color: #666;">Used to keep the platform running smoothly</span>
-                            </div>
-                            <div class="breakdown-value">₹${breakdown.platformFee.toLocaleString('en-IN')}</div>
-                        </div>
-                        
-                        <div class="breakdown-item">
-                            <div class="breakdown-label">
-                                <span class="breakdown-label-main">Host Service Support</span>
-                                <span class="breakdown-label-sub">2% of base stay price</span>
-                                <span class="breakdown-label-sub" style="margin-top: 3px; color: #666;">Covers host assistance and customer support</span>
-                            </div>
-                            <div class="breakdown-value">₹${breakdown.hostSupportFee.toLocaleString('en-IN')}</div>
-                        </div>
-                        
-                        <div class="breakdown-item">
-                            <div class="breakdown-label">
-                                <span class="breakdown-label-main">Local Taxes & Regulations</span>
-                                <span class="breakdown-label-sub">5% of subtotal</span>
-                                <span class="breakdown-label-sub" style="margin-top: 3px; color: #666;">Government-mandated charges</span>
-                            </div>
-                            <div class="breakdown-value">₹${breakdown.taxAmount.toLocaleString('en-IN')}</div>
-                        </div>
-                        
-                        <div class="breakdown-separator"></div>
-                        
-                        <div class="breakdown-total-row">
-                            <div class="breakdown-total-label">Total Payable Amount</div>
-                            <div class="breakdown-total-value">₹${breakdown.total.toLocaleString('en-IN')}</div>
-                        </div>
-                        
-                        <div class="breakdown-trust-signal">
-                            <span class="breakdown-trust-icon">✓</span>No hidden charges — this is the final amount you pay
-                        </div>
-                    </div>
-                `;
-                
-                // Attach toggle handler
-                const header = priceBreakdownCard.querySelector('.breakdown-header');
-                header.addEventListener('click', () => {
-                    const details = priceBreakdownCard.querySelector('.breakdown-details');
-                    const toggle = priceBreakdownCard.querySelector('.breakdown-toggle');
-                    details.classList.toggle('open');
-                    toggle.classList.toggle('open');
-                });
             }
 
             function updateActionState() {
@@ -2027,27 +2111,19 @@
                     actionBtn.disabled = false;
                     messageEl.className = 'availability-message success';
                     
-                    // Calculate breakdown
+                    // Calculate and show price
                     const nights = Math.max(1, Math.round((selectedEnd - selectedStart) / (1000 * 60 * 60 * 24)));
-                    const breakdown = calculateBreakdown(hotel.price, nights);
-                    
-                    // Show summary preview
+                    const total = nights * hotel.price;
                     priceSummary.innerHTML = `
-                        <div><strong>${nights} nights</strong> × ₹${breakdown.pricePerNight.toLocaleString('en-IN')} per night</div>
-                        <div style="margin-top:6px;"><strong>Total:</strong> ₹${breakdown.total.toLocaleString('en-IN')}</div>
+                        <div><strong>${nights} nights</strong> × ₹${Math.round(hotel.price).toLocaleString('en-IN')} per night</div>
+                        <div style="margin-top:6px;"><strong>Total:</strong> ₹${Math.round(total).toLocaleString('en-IN')}</div>
                     `;
                     priceSummary.style.display = 'block';
-                    
-                    // Render and show breakdown card
-                    renderPriceBreakdown(breakdown);
-                    priceBreakdownCard.classList.add('visible');
-                    
                     messageEl.textContent = 'Ready to book!';
                 } else {
                     // Invalid dates or missing selection
                     actionBtn.disabled = true;
                     priceSummary.style.display = 'none';
-                    priceBreakdownCard.classList.remove('visible');
                     messageEl.className = 'availability-message';
                     messageEl.textContent = 'Select dates to continue';
                 }
@@ -2184,27 +2260,16 @@
                 updateActionState();
             }
 
-            actionBtn.addEventListener('click', async () => {
-                if (!selectedStart || !selectedEnd) {
-                    messageEl.className = 'availability-message error';
-                    messageEl.textContent = 'Select both check-in and check-out dates.';
-                    return;
-                }
+            // ==================== BOOKING PROCESS ====================
+            // Format dates as YYYY-MM-DD using local time (no UTC conversion)
+            const formatLocalDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
 
-                if (selectedEnd <= selectedStart) {
-                    messageEl.className = 'availability-message error';
-                    messageEl.textContent = 'Checkout must be after check-in.';
-                    return;
-                }
-
-                // Validate that selected dates don't fall in blocked ranges
-                if (isRangeBlocked(selectedStart, selectedEnd)) {
-                    messageEl.className = 'availability-message error';
-                    messageEl.textContent = 'Selected dates are not available for this hotel.';
-                    return;
-                }
-
-                // Prevent duplicate submissions
+            async function proceedWithBooking() {
                 actionBtn.textContent = 'Processing...';
                 actionBtn.disabled = true;
 
@@ -2219,14 +2284,6 @@
                         }, 2000);
                         return;
                     }
-
-                    // Format dates as YYYY-MM-DD using local time (no UTC conversion)
-                    const formatLocalDate = (date) => {
-                        const year = date.getFullYear();
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const day = String(date.getDate()).padStart(2, '0');
-                        return `${year}-${month}-${day}`;
-                    };
 
                     // PRODUCTION RULE: Only send booking details, NOT user identity
                     // Backend derives user_id from JWT token and validates availability as safety check
@@ -2246,6 +2303,9 @@
                     // Refresh blocked dates to include the newly booked dates
                     console.log('[BOOKING] Refreshing calendar with newly booked dates');
                     await fetchBlockedDates(hotel.id);
+
+                    // Hide E-Bill modal
+                    hideEBill();
 
                     // CRITICAL: Show confirmation card ONLY after booking API succeeds
                     messageEl.className = 'availability-message success';
@@ -2268,11 +2328,49 @@
                     messageEl.textContent = `Booking failed: ${error.message}`;
                     
                 } finally {
-                    // ALWAYS restore button to initial state if booking NOT successful
-                    if (!bookingSuccess) {
-                        actionBtn.textContent = 'Book Now';
-                        updateActionState();
-                    }
+                    actionBtn.textContent = 'Book Now';
+                    actionBtn.disabled = false;
+                }
+            }
+
+            actionBtn.addEventListener('click', async () => {
+                if (!selectedStart || !selectedEnd) {
+                    messageEl.className = 'availability-message error';
+                    messageEl.textContent = 'Select both check-in and check-out dates.';
+                    return;
+                }
+
+                if (selectedEnd <= selectedStart) {
+                    messageEl.className = 'availability-message error';
+                    messageEl.textContent = 'Checkout must be after check-in.';
+                    return;
+                }
+
+                // Validate that selected dates don't fall in blocked ranges
+                if (isRangeBlocked(selectedStart, selectedEnd)) {
+                    messageEl.className = 'availability-message error';
+                    messageEl.textContent = 'Selected dates are not available for this hotel.';
+                    return;
+                }
+
+                // ===== SHOW E-BILL INSTEAD OF BOOKING IMMEDIATELY =====
+                showEBill();
+            });
+
+            // ==================== E-BILL BUTTON HANDLERS ====================
+            document.getElementById('eBillEditBtn').addEventListener('click', () => {
+                hideEBill();
+            });
+
+            document.getElementById('eBillConfirmBtn').addEventListener('click', async () => {
+                hideEBill();
+                await proceedWithBooking();
+            });
+
+            // Close E-Bill modal when clicking on overlay (dark background)
+            eBillModalOverlay.addEventListener('click', (event) => {
+                if (event.target === eBillModalOverlay) {
+                    hideEBill();
                 }
             });
         }
