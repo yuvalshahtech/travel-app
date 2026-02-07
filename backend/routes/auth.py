@@ -9,6 +9,7 @@ from backend.utils.database import (
 from backend.utils.auth import hash_password, verify_password
 from backend.utils.otp import generate_otp, get_otp_expiry, is_otp_expired
 from backend.utils.email import send_otp_email
+from backend.utils.jwt_auth import create_access_token
 import sqlite3
 
 router = APIRouter()
@@ -121,7 +122,7 @@ async def verify_otp(data: dict):
 @router.post("/login")
 async def login(user: User):
     """
-    Login user
+    Login user - Returns JWT access token
     Validates email and password
     """
     # Get user from database
@@ -140,8 +141,15 @@ async def login(user: User):
     except UnknownHashError:
         raise HTTPException(status_code=400, detail="Stored password hash is invalid.")
     
+    # Generate JWT token with user_id and email
+    # JWT spec requires 'sub' claim to be a STRING
+    access_token = create_access_token(
+        data={"sub": str(db_user['id']), "email": db_user['email']}
+    )
+    
     return {
-        "id": db_user['id'],
+        "access_token": access_token,
+        "token_type": "bearer",
         "email": db_user['email'],
         "message": "Login successful"
     }

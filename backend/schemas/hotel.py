@@ -1,5 +1,6 @@
 from typing import List
-from pydantic import BaseModel
+from datetime import date
+from pydantic import BaseModel, EmailStr
 
 class HotelReview(BaseModel):
     user: str
@@ -20,3 +21,42 @@ class HotelDetails(BaseModel):
     latitude: float
     longitude: float
     reviews: List[HotelReview]
+
+class AvailabilityRequest(BaseModel):
+    hotel_id: int
+    check_in_date: date
+    check_out_date: date
+    number_of_guests: int
+
+class AvailabilityResponse(BaseModel):
+    available: bool
+    message: str
+
+class BookingRequest(BaseModel):
+    """
+    Booking request payload.
+    
+    SECURITY: user_id, user_email, user_name are derived from JWT token,
+    NOT from frontend payload. Only booking details are accepted.
+    """
+    hotel_id: int
+    check_in_date: date
+    check_out_date: date
+    number_of_guests: int
+
+class BookingResponse(BaseModel):
+    booking_id: int
+    message: str
+
+class UserBooking(BaseModel):
+    id: str  # booking_id as string
+    hotel_id: int
+    hotel_name: str
+    check_in: str  # ISO date string
+    check_out: str  # ISO date string
+    guests: int
+    total_price: float
+    status: str  # "upcoming", "completed", "cancelled"
+
+class UserBookingListResponse(BaseModel):
+    bookings: List[UserBooking]

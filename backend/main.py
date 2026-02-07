@@ -1,8 +1,12 @@
 from dotenv import load_dotenv
-load_dotenv()
+from pathlib import Path
+
+# Load .env from project root (parent of backend directory)
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path, override=True)
+
 import logging
 import os
-from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -43,6 +47,12 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     init_database()
+    # Verify JWT_SECRET_KEY is loaded
+    import sys
+    from backend.utils.jwt_auth import get_secret_key
+    secret = get_secret_key()
+    print(f"[STARTUP] JWT_SECRET_KEY is configured: {secret[:20]}... (length: {len(secret)})", file=sys.stderr)
+    print(f"[STARTUP] JWT authentication is ready", file=sys.stderr)
 
 # Include routers
 app.include_router(auth_router)

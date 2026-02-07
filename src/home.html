@@ -50,7 +50,8 @@
             align-items: center;
         }
 
-        button.logout-btn {
+        button.logout-btn,
+        button.profile-btn {
             background-color: #FF5A5F;
             color: white;
             border: none;
@@ -58,11 +59,36 @@
             border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
-            transition: background-color 0.2s;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(255, 90, 95, 0.2);
         }
 
-        button.logout-btn:hover {
+        button.logout-btn:hover,
+        button.profile-btn:hover {
             background-color: #E74C52;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(255, 90, 95, 0.3);
+        }
+
+        button.logout-btn:active,
+        button.profile-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(255, 90, 95, 0.2);
+        }
+
+        button.logout-btn:focus,
+        button.profile-btn:focus {
+            outline: 2px solid #FF5A5F;
+            outline-offset: 2px;
+        }
+
+        button.logout-btn:disabled,
+        button.profile-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
         }
 
         .search-section {
@@ -215,6 +241,128 @@
                 font-size: 20px;
                 margin: 30px 0 15px;
             }
+
+            .header-container {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .user-menu {
+                flex-wrap: wrap;
+                gap: 8px;
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            button.logout-btn,
+            button.profile-btn {
+                padding: 8px 14px;
+                font-size: 13px;
+            }
+
+            #userEmail {
+                width: 100%;
+                order: -1;
+            }
+        }
+
+        @media (max-width: 480px) {
+            button.logout-btn,
+            button.profile-btn {
+                flex: 1;
+                min-width: 100px;
+            }
+
+            .user-menu {
+                justify-content: stretch;
+            }
+        }
+
+        /* Logout Confirmation Modal */
+        .logout-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .logout-modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logout-modal {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            padding: 28px;
+            max-width: 400px;
+            width: 90%;
+            animation: slideUp 0.3s ease;
+        }
+
+        .logout-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .logout-modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .logout-modal-btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-modal-btn-cancel {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .logout-modal-btn-cancel:hover {
+            background-color: #e0e0e0;
+        }
+
+        .logout-modal-btn-logout {
+            background-color: #d90429;
+            color: white;
+        }
+
+        .logout-modal-btn-logout:hover {
+            background-color: #b50321;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
@@ -224,10 +372,22 @@
             <a href="home.html" class="logo">✈️ Travel Explorer</a>
             <div class="user-menu">
                 <span id="userEmail" style="color: #666; font-size: 14px;"></span>
-                <button class="logout-btn" onclick="logout()">Logout</button>
+                <button class="profile-btn" onclick="window.location.href='profile.html'" aria-label="View your profile">My Profile</button>
+                <button class="logout-btn" onclick="logout()" aria-label="Logout">Logout</button>
             </div>
         </div>
     </header>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="logout-modal-overlay" id="logoutModal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+        <div class="logout-modal">
+            <h2 class="logout-modal-title" id="logoutModalTitle">Are you sure you want to logout?</h2>
+            <div class="logout-modal-buttons">
+                <button class="logout-modal-btn logout-modal-btn-cancel" id="logoutCancelBtn">Cancel</button>
+                <button class="logout-modal-btn logout-modal-btn-logout" id="logoutConfirmBtn">Logout</button>
+            </div>
+        </div>
+    </div>
 
     <div class="search-section">
         <div class="search-bar-container">
@@ -354,8 +514,85 @@
         }
 
         function logout() {
-            localStorage.removeItem('userEmail');
-            window.location.href = 'signup.html';
+            // Show custom modal every time
+            showLogoutModal();
+        }
+
+        function showLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            const cancelBtn = document.getElementById('logoutCancelBtn');
+            const confirmBtn = document.getElementById('logoutConfirmBtn');
+            
+            // Show modal
+            modal.classList.add('show');
+            
+            // Focus on cancel button for accessibility
+            cancelBtn.focus();
+            
+            // Trap focus within modal
+            const focusableElements = modal.querySelectorAll('button');
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+            
+            function trapFocus(e) {
+                if (e.key === 'Tab') {
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstElement) {
+                            lastElement.focus();
+                            e.preventDefault();
+                        }
+                    } else {
+                        if (document.activeElement === lastElement) {
+                            firstElement.focus();
+                            e.preventDefault();
+                        }
+                    }
+                }
+                if (e.key === 'Escape') {
+                    hideLogoutModal();
+                }
+            }
+            
+            modal.addEventListener('keydown', trapFocus);
+            
+            // Cancel button handler
+            function handleCancel() {
+                hideLogoutModal();
+                cleanup();
+            }
+            
+            // Confirm button handler
+            function handleConfirm() {
+                hideLogoutModal();
+                cleanup();
+                // Proceed with logout
+                localStorage.removeItem('userEmail');
+                window.location.href = 'signup.html';
+            }
+            
+            // Close on overlay click
+            function handleOverlayClick(e) {
+                if (e.target === modal) {
+                    hideLogoutModal();
+                    cleanup();
+                }
+            }
+            
+            function cleanup() {
+                cancelBtn.removeEventListener('click', handleCancel);
+                confirmBtn.removeEventListener('click', handleConfirm);
+                modal.removeEventListener('click', handleOverlayClick);
+                modal.removeEventListener('keydown', trapFocus);
+            }
+            
+            cancelBtn.addEventListener('click', handleCancel);
+            confirmBtn.addEventListener('click', handleConfirm);
+            modal.addEventListener('click', handleOverlayClick);
+        }
+        
+        function hideLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            modal.classList.remove('show');
         }
 
         // Expose functions to global scope for onclick handlers

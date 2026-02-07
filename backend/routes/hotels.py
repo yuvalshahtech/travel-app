@@ -1,14 +1,31 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Depends
+from datetime import date
 from pathlib import Path
 import random
-from backend.schemas.hotel import HotelDetails
+from backend.schemas.hotel import (
+    HotelDetails,
+    AvailabilityRequest,
+    AvailabilityResponse,
+    BookingRequest,
+    BookingResponse,
+    UserBooking,
+    UserBookingListResponse
+)
 from backend.utils.database import (
     get_hotel_by_id,
     get_recent_hotels,
     get_hotels_by_city,
     search_hotels,
-    search_hotels_with_filters
+    search_hotels_with_filters,
+    get_overlapping_bookings,
+    create_booking,
+    get_hotel_bookings,
+    merge_date_ranges,
+    get_user_bookings,
+    get_user_by_id
 )
+from backend.utils.email import send_booking_confirmation_email
+from backend.utils.jwt_auth import get_current_user_id
 
 router = APIRouter(prefix="/hotels", tags=["hotels"])
 
@@ -329,3 +346,318 @@ async def get_hotel(hotel_id: int):
         "longitude": hotel["longitude"],
         "reviews": generate_reviews(hotel),
     }
+
+@router.post("/availability", response_model=AvailabilityResponse)
+async def check_availability(payload: AvailabilityRequest):
+    """Check hotel availability for a date range and guest count"""
+    hotel = get_hotel_by_id(payload.hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    if payload.number_of_guests < 1:
+        return {"available": False, "message": "Guests must be at least 1."}
+
+    if payload.check_out_date <= payload.check_in_date:
+        return {"available": False, "message": "Checkout must be after check-in."}
+
+    if payload.check_in_date < date.today():
+        return {"available": False, "message": "Check-in date cannot be in the past."}
+
+    max_guests = hotel["guests"] if hotel["guests"] is not None else 2
+    if payload.number_of_guests > max_guests:
+        return {"available": False, "message": "Selected guests exceed max capacity."}
+
+    overlaps = get_overlapping_bookings(
+        payload.hotel_id,
+        payload.check_in_date.isoformat(),
+        payload.check_out_date.isoformat()
+    )
+    if overlaps:
+        return {"available": False, "message": "Hotel is not available for selected dates."}
+
+    return {"available": True, "message": "Hotel is available for your dates."}
+
+@router.post("/bookings", response_model=BookingResponse)
+async def create_booking_endpoint(
+    payload: BookingRequest,
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Create a booking and send confirmation email.
+    
+    SECURITY: User identity is derived from JWT token ONLY.
+    Frontend sends only booking details (hotel_id, dates, guests).
+    Backend extracts user_id from authenticated token.
+    
+    Authentication: Required (JWT token in Authorization header)
+    """
+    # Get user details from database using authenticated user_id
+    user = get_user_by_id(current_user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    user_email = user["email"]
+    user_name = user_email.split('@')[0].title()  # Extract name from email
+    
+    hotel = get_hotel_by_id(payload.hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    if payload.number_of_guests < 1:
+        raise HTTPException(status_code=400, detail="Guests must be at least 1.")
+
+    if payload.check_out_date <= payload.check_in_date:
+        raise HTTPException(status_code=400, detail="Checkout must be after check-in.")
+
+    if payload.check_in_date < date.today():
+        raise HTTPException(status_code=400, detail="Check-in date cannot be in the past.")
+
+    max_guests = hotel["guests"] if hotel["guests"] is not None else 2
+    if payload.number_of_guests > max_guests:
+        raise HTTPException(status_code=400, detail="Selected guests exceed max capacity.")
+
+    overlaps = get_overlapping_bookings(
+        payload.hotel_id,
+        payload.check_in_date.isoformat(),
+        payload.check_out_date.isoformat()
+    )
+    if overlaps:
+        raise HTTPException(status_code=409, detail="Hotel is not available for selected dates.")
+
+    # Calculate total price
+    num_nights = (payload.check_out_date - payload.check_in_date).days
+    total_price = float(hotel["price"]) * num_nights if hotel["price"] else 0
+
+    # Create booking with user_id from JWT token (NOT from payload)
+    booking_id = create_booking(
+        payload.hotel_id,
+        payload.check_in_date.isoformat(),
+        payload.check_out_date.isoformat(),
+        payload.number_of_guests,
+        status="confirmed",
+        user_id=current_user_id,  # From JWT token
+        price=total_price
+    )
+
+    # DIAGNOSTIC TEST: Direct synchronous call (no threading)
+    # This proves whether the email function works at all
+    print("\n[DIAGNOSTIC] About to call email function DIRECTLY (no threading)")
+    print(f"[DIAGNOSTIC] Booking ID: {booking_id}")
+    print(f"[DIAGNOSTIC] User email: {user_email}")
+    print(f"[DIAGNOSTIC] User name: {user_name}")
+    print(f"[DIAGNOSTIC] Hotel name: {hotel['name']}")
+    
+    try:
+        email_result = send_booking_confirmation_email(
+            user_email,  # From JWT authenticated user
+            user_name,   # Derived from email
+            hotel["name"],
+            payload.check_in_date.isoformat(),
+            payload.check_out_date.isoformat()
+        )
+        print(f"[DIAGNOSTIC] Email function returned: {email_result}")
+    except Exception as e:
+        print(f"[DIAGNOSTIC] Email function raised exception: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+
+    return {
+        "booking_id": booking_id,
+        "message": "Booking confirmed. Confirmation email sent."
+    }
+
+
+@router.get("/{hotel_id}/blocked-dates")
+def get_blocked_dates(hotel_id: int):
+    """
+    Get all unavailable (blocked) date ranges for a hotel.
+    
+    Blocked dates are determined by confirmed bookings.
+    Each booking blocks from check_in_date (inclusive) to check_out_date (exclusive).
+    Overlapping and adjacent ranges are merged into single ranges.
+    
+    Args:
+        hotel_id: The ID of the hotel
+    
+    Returns:
+        {
+            "hotel_id": int,
+            "blocked_dates": [
+                { "start": "2026-02-10", "end": "2026-02-12" },
+                { "start": "2026-02-18", "end": "2026-02-20" }
+            ]
+        }
+    
+    Raises:
+        404: If hotel does not exist
+    """
+    # Verify hotel exists
+    hotel = get_hotel_by_id(hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+    
+    # Fetch all confirmed bookings for this hotel
+    bookings = get_hotel_bookings(hotel_id)
+    
+    # If no bookings, return empty blocked_dates array
+    if not bookings:
+        return {
+            "hotel_id": hotel_id,
+            "blocked_dates": []
+        }
+    
+    # Convert bookings to date range tuples (check_in, check_out)
+    date_ranges = [
+        (booking["check_in_date"], booking["check_out_date"])
+        for booking in bookings
+    ]
+    
+    # Merge overlapping and adjacent ranges
+    merged_ranges = merge_date_ranges(date_ranges)
+    
+    # Convert back to list of dicts with "start" and "end" keys
+    blocked_dates = [
+        {"start": start, "end": end}
+        for start, end in merged_ranges
+    ]
+    
+    return {
+        "hotel_id": hotel_id,
+        "blocked_dates": blocked_dates
+    }
+
+@router.get("/bookings/my", response_model=UserBookingListResponse)
+def get_my_booking_history(current_user_id: int = Depends(get_current_user_id)):
+    """
+    Get all bookings for the currently authenticated user.
+    
+    SECURITY: User identity is derived from JWT token ONLY.
+    Frontend cannot manipulate or access other users' bookings.
+    
+    Returns booking history with calculated status (upcoming/completed/cancelled)
+    and total price based on nightly rate and number of nights.
+    
+    Authentication: Required (JWT token in Authorization header)
+    
+    Returns:
+        UserBookingListResponse with list of user's bookings
+    """
+    from datetime import datetime
+    
+    # Get bookings for the AUTHENTICATED user only
+    # current_user_id comes from JWT token, not from frontend
+    bookings = get_user_bookings(current_user_id)
+    
+    # Transform database records into UserBooking response format
+    user_bookings = []
+    today = datetime.now().date()
+    
+    for booking in bookings:
+        # Parse dates
+        check_in = datetime.strptime(booking["check_in_date"], "%Y-%m-%d").date()
+        check_out = datetime.strptime(booking["check_out_date"], "%Y-%m-%d").date()
+        
+        # Calculate number of nights
+        num_nights = (check_out - check_in).days
+        
+        # Calculate total price
+        # Use booking price if stored, otherwise calculate from hotel nightly rate
+        try:
+            if booking["price"] is not None:
+                total_price = float(booking["price"])
+            else:
+                hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+                total_price = hotel_nightly_rate * num_nights
+        except (KeyError, TypeError):
+            hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+            total_price = hotel_nightly_rate * num_nights
+        
+        # Determine status
+        # If booking has explicit status and it's cancelled, use that
+        # Otherwise, determine based on check-in date
+        if booking["status"] == "cancelled":
+            status = "cancelled"
+        elif check_in > today:
+            status = "upcoming"
+        else:
+            status = "completed"
+        
+        user_bookings.append(UserBooking(
+            id=str(booking["booking_id"]),
+            hotel_id=booking["hotel_id"],
+            hotel_name=booking["hotel_name"],
+            check_in=booking["check_in_date"],
+            check_out=booking["check_out_date"],
+            guests=booking["guests"],
+            total_price=total_price,
+            status=status
+        ))
+    
+    return UserBookingListResponse(bookings=user_bookings)
+
+@router.get("/users/{user_id}/bookings", response_model=UserBookingListResponse)
+def get_user_booking_history(
+    user_id: int,
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Get all bookings for a specific user with hotel details.
+    
+    Returns booking history with calculated status (upcoming/completed/cancelled)
+    and total price based on nightly rate and number of nights.
+    """
+    from datetime import datetime, timedelta
+    
+    # Enforce account isolation (user_id must match authenticated user)
+    if user_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Forbidden: user mismatch")
+
+    # Get user bookings from database
+    bookings = get_user_bookings(current_user_id)
+    
+    # Transform database records into UserBooking response format
+    user_bookings = []
+    today = datetime.now().date()
+    
+    for booking in bookings:
+        # Parse dates
+        check_in = datetime.strptime(booking["check_in_date"], "%Y-%m-%d").date()
+        check_out = datetime.strptime(booking["check_out_date"], "%Y-%m-%d").date()
+        
+        # Calculate number of nights
+        num_nights = (check_out - check_in).days
+        
+        # Calculate total price
+        # Use booking price if stored, otherwise calculate from hotel nightly rate
+        try:
+            if booking["price"] is not None:
+                total_price = float(booking["price"])
+            else:
+                hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+                total_price = hotel_nightly_rate * num_nights
+        except (KeyError, TypeError):
+            hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+            total_price = hotel_nightly_rate * num_nights
+        
+        # Determine status
+        # If booking has explicit status and it's cancelled, use that
+        # Otherwise, determine based on check-in date
+        if booking["status"] == "cancelled":
+            status = "cancelled"
+        elif check_in > today:
+            status = "upcoming"
+        else:
+            status = "completed"
+        
+        user_bookings.append(UserBooking(
+            id=str(booking["booking_id"]),
+            hotel_id=booking["hotel_id"],
+            hotel_name=booking["hotel_name"],
+            check_in=booking["check_in_date"],
+            check_out=booking["check_out_date"],
+            guests=booking["guests"],
+            total_price=total_price,
+            status=status
+        ))
+    
+    return UserBookingListResponse(bookings=user_bookings)

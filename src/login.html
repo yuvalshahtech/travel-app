@@ -373,10 +373,32 @@
 
                 const data = await response.json();
 
+                console.log('[LOGIN] Response data:', data);
+                console.log('[LOGIN] Has access_token:', !!data.access_token);
+                if (data.access_token) {
+                    console.log('[LOGIN] Token length:', data.access_token.length);
+                    console.log('[LOGIN] Token preview:', data.access_token.substring(0, 50));
+                }
+
                 if (response.ok) {
+                    if (!data.access_token) {
+                        showMessage('Login failed: missing access token. Please try again.', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Login';
+                        return;
+                    }
+
+                    console.log('[LOGIN] Storing authToken to localStorage');
                     showMessage('Login Successful', 'success');
                     clearPrefillData();
-                    localStorage.setItem('userEmail', email);
+                    
+                    // Store JWT token and email
+                    localStorage.setItem('authToken', data.access_token);
+                    localStorage.setItem('userEmail', data.email || email);
+                    
+                    console.log('[LOGIN] Token stored. Verification:');
+                    console.log('[LOGIN] localStorage.getItem("authToken"):', localStorage.getItem('authToken') ? 'EXISTS' : 'MISSING');
+                    
                     setTimeout(() => {
                         window.location.href = 'home.html';
                     }, 900);

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Travel Explorer</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <style>
+        :root {
+            --brand-red: #d90429;
+            --brand-red-dark: #b50321;
+            --border: #e6e6e6;
+            --success: #027a48;
+            --warning: #f59e0b;
+            --grey: #6b7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+        }
+
+        header {
+            background-color: #fff;
+            border-bottom: 1px solid var(--border);
+            padding: 15px 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--brand-red);
+            text-decoration: none;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        button {
+            background-color: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--brand-red-dark);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 20px;
+        }
+
+        .profile-header {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--brand-red), #ff6b6b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .profile-details h1 {
+            font-size: 28px;
+            margin-bottom: 4px;
+            color: #1a1a1a;
+        }
+
+        .profile-email {
+            color: var(--grey);
+            font-size: 15px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+        }
+
+        .bookings-container {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--grey);
+            font-size: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        .empty-state-text {
+            color: var(--grey);
+            font-size: 15px;
+            margin-bottom: 24px;
+        }
+
+        .booking-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+
+        .booking-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: var(--brand-red);
+        }
+
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .booking-hotel-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .booking-id {
+            font-size: 13px;
+            color: var(--grey);
+        }
+
+        .booking-status {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        .booking-status.upcoming {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .booking-status.completed {
+            background-color: #d1fae5;
+            color: var(--success);
+        }
+
+        .booking-status.cancelled {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .booking-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .booking-detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .booking-detail-label {
+            font-size: 13px;
+            color: var(--grey);
+            font-weight: 500;
+        }
+
+        .booking-detail-value {
+            font-size: 15px;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .booking-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+
+        .btn-danger {
+            background-color: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #b91c1c;
+        }
+
+        /* Logout Confirmation Modal */
+        .logout-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .logout-modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logout-modal {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            padding: 28px;
+            max-width: 400px;
+            width: 90%;
+            animation: slideUp 0.3s ease;
+        }
+
+        .logout-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .logout-modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .logout-modal-btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-modal-btn-cancel {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .logout-modal-btn-cancel:hover {
+            background-color: #e0e0e0;
+        }
+
+        .logout-modal-btn-logout {
+            background-color: var(--brand-red);
+            color: white;
+        }
+
+        .logout-modal-btn-logout:hover {
+            background-color: var(--brand-red-dark);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .profile-info {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profile-details h1 {
+                font-size: 24px;
+            }
+
+            .booking-details {
+                grid-template-columns: 1fr;
+            }
+
+            .booking-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .booking-actions {
+                flex-direction: column;
+            }
+
+            .booking-actions button {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px 12px;
+            }
+
+            .profile-header,
+            .bookings-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="home.html" class="logo">✈️ Travel Explorer</a>
+            <div class="header-actions">
+                <button onclick="window.location.href='home.html'">Home</button>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="logout-modal-overlay" id="logoutModal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+        <div class="logout-modal">
+            <h2 class="logout-modal-title" id="logoutModalTitle">Are you sure you want to logout?</h2>
+            <div class="logout-modal-buttons">
+                <button class="logout-modal-btn logout-modal-btn-cancel" id="logoutCancelBtn">Cancel</button>
+                <button class="logout-modal-btn logout-modal-btn-logout" id="logoutConfirmBtn">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-info">
+                <div class="profile-avatar" id="profileAvatar"></div>
+                <div class="profile-details">
+                    <h1 id="userName">Loading...</h1>
+                    <p class="profile-email" id="userEmail">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking History Section -->
+        <div class="bookings-container">
+            <h2 class="section-title">Booking History</h2>
+            <div id="bookingsContent">
+                <div class="loading">Loading your bookings...</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { API_BASE } from './services/api.js';
+
+        // PRODUCTION RULE: Authentication is JWT-only
+        // Decode JWT for userId/email; never use localStorage userId
+
+        function parseJwt(token) {
+            try {
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    return null;
+                }
+                let payload = parts[1]
+                    .replace(/-/g, '+')
+                    .replace(/_/g, '/');
+                while (payload.length % 4 !== 0) {
+                    payload += '=';
+                }
+                const decoded = JSON.parse(atob(payload));
+                return decoded;
+            } catch (error) {
+                console.warn('[AUTH] Invalid JWT token format');
+                return null;
+            }
+        }
+
+        // PRODUCTION RULE: Authentication determined ONCE at page load
+        // Based on authToken presence ONLY
+        // Bookings API failures NEVER trigger logout
+        
+        // DEBUG: Test authentication on page load
+        function testAuth() {
+            const authToken = localStorage.getItem('authToken');
+            console.log('=== AUTH DEBUG ===');
+            console.log('authToken from localStorage:', !!authToken);
+            if (authToken) {
+                console.log('Token preview (first 50 chars):', authToken.substring(0, 50));
+                console.log('Token preview (last 50 chars):', authToken.substring(authToken.length - 50));
+                const decoded = tryDecodeJwt(authToken);
+                console.log('Decoded JWT:', decoded);
+            }
+        }
+
+        // Call test at page start
+        testAuth();
+
+        function getAuthToken() {
+            const authToken = localStorage.getItem('authToken');
+            return authToken;
+        }
+
+        function tryDecodeJwt(token) {
+            // Best-effort JWT decode for display purposes
+            // Failure does NOT affect authentication status
+            try {
+                const payload = parseJwt(token);
+                if (payload && payload.sub) {
+                    return payload;
+                }
+                return null;
+            } catch (error) {
+                console.warn('[AUTH] Could not decode JWT for display:', error.message);
+                return null;
+            }
+        }
+
+        // STEP 1: Check authentication (runs once at page load)
+        // Returns true if authToken exists, false otherwise
+        function checkAuthentication() {
+            const authToken = getAuthToken();
+            if (!authToken) {
+                console.warn('[AUTH] No authToken in localStorage - user not authenticated');
+                redirectToLogin('Please log in to view your bookings.');
+                return false;
+            }
+            return true;
+        }
+
+        // STEP 2: Initialize page if authenticated
+        // Display user info from JWT, then load bookings
+        async function initializeAuthenticatedPage() {
+            const authToken = getAuthToken();
+            
+            // Try to decode JWT for user info (non-critical)
+            const payload = tryDecodeJwt(authToken);
+            
+            // Display profile immediately (with fallback if decode fails)
+            if (payload && payload.email) {
+                displayUserInfo(payload);
+            } else {
+                displayUserInfo({ email: 'Authenticated User', sub: null });
+            }
+
+            // Load bookings asynchronously (failures are non-critical)
+            await loadBookings(authToken, payload);
+        }
+
+        // STEP 3: Load bookings (API failures do NOT cause logout)
+        async function loadBookings(authToken, payload) {
+            const bookingsContent = document.getElementById('bookingsContent');
+            
+            try {
+                // Extract userId from JWT for endpoint call
+                let userId = payload ? payload.sub : null;
+                
+                if (!userId) {
+                    console.warn('[BOOKINGS] Could not extract userId from JWT, using fallback');
+                    userId = 'current';
+                }
+
+                // DEBUG: Log request details
+                console.log('[BOOKINGS] Sending request:');
+                console.log(`  URL: ${API_BASE}/hotels/users/${userId}/bookings`);
+                console.log(`  authToken exists: ${!!authToken}`);
+                if (authToken) {
+                    console.log(`  authToken length: ${authToken.length}`);
+                    console.log(`  authToken starts with "eyJ": ${authToken.startsWith('eyJ')}`);
+                    console.log(`  authToken has 3 parts (JWT): ${(authToken.match(/\./g) || []).length === 2}`);
+                    console.log(`  Full authToken: ${authToken}`);
+                }
+                console.log(`  Authorization header will be: "Bearer ${authToken ? authToken.substring(0, 30) + '...' : 'MISSING'}"`);
+                console.log(`  userId: ${userId}`);
+
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                };
+                console.log('[BOOKINGS] Headers being sent:', headers);
+
+                const response = await fetch(`${API_BASE}/hotels/users/${userId}/bookings`, {
+                    headers: headers
+                });
+                
+                console.log(`[BOOKINGS] Response status: ${response.status}`);
+                console.log(`[BOOKINGS] Response headers:`, response.headers);
+                if (response.status === 401) {
+                    const errorText = await response.text();
+                    console.log('[BOOKINGS] 401 Response body:', errorText);
+                }
+
+                // API failure responses are non-critical
+                // User remains authenticated even if bookings API fails
+                if (response.status === 401 || response.status === 403) {
+                    console.warn(`[BOOKINGS] API returned ${response.status} - showing error inline (NOT logging out)`);
+                    showBookingsError('Unable to load bookings. Please try again.');
+                    return;
+                }
+
+                if (!response.ok) {
+                    console.warn(`[BOOKINGS] HTTP ${response.status}: ${response.statusText}`);
+                    showBookingsError('Unable to load bookings. Please try again.');
+                    return;
+                }
+
+                const data = await response.json();
+                const bookings = data.bookings || [];
+                
+                // PRODUCTION RULE: Show ONLY real database data (NO demo/sample/fallback)
+                if (bookings.length === 0) {
+                    showEmptyState();
+                    return;
+                }
+
+                renderBookings(bookings);
+            } catch (error) {
+                console.error('[BOOKINGS] Network or parsing error:', error.message);
+                showBookingsError('Unable to load bookings. Please try again.');
+            }
+        }
+
+        function displayUserInfo(payload) {
+            // Handle partial payload (from JWT decode) gracefully
+            const userEmail = payload && payload.email ? payload.email : 'Authenticated User';
+            document.getElementById('userEmail').textContent = userEmail;
+            
+            const userName = userEmail && userEmail.includes('@')
+                ? userEmail.split('@')[0]
+                    .split('.')
+                    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join(' ')
+                : 'User';
+            
+            document.getElementById('userName').textContent = userName;
+            document.getElementById('profileAvatar').textContent = userName.charAt(0).toUpperCase();
+        }
+
+        function redirectToLogin(message) {
+            const bookingsContent = document.getElementById('bookingsContent');
+            bookingsContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔒</div>
+                    <h3 class="empty-state-title">Please log in</h3>
+                    <p class="empty-state-text">${message || 'You need to be logged in to view your bookings.'}</p>
+                    <button onclick="window.location.href='login.html'">Go to Login</button>
+                </div>
+            `;
+            
+            // Update profile header
+            document.getElementById('userName').textContent = 'Not Logged In';
+            document.getElementById('userEmail').textContent = 'Please log in to continue';
+            document.getElementById('profileAvatar').textContent = '?';
+            
+            // Clear invalid/expired tokens
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Redirect to login to enforce re-auth
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1200);
+        }
+
+        function showNotLoggedIn(message) {
+            const bookingsContent = document.getElementById('bookingsContent');
+            bookingsContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔒</div>
+                    <h3 class="empty-state-title">Please log in</h3>
+                    <p class="empty-state-text">${message || 'You need to be logged in to view your bookings.'}</p>
+                    <button onclick="window.location.href='login.html'">Go to Login</button>
+                </div>
+            `;
+            
+            // Update profile header
+            document.getElementById('userName').textContent = 'Not Logged In';
+            document.getElementById('userEmail').textContent = 'Please log in to continue';
+            document.getElementById('profileAvatar').textContent = '?';
+            
+            // Clear invalid/expired tokens
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Redirect to login to enforce re-auth
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1200);
+        }
+
+        function showEmptyState() {
+            const bookingsContent = document.getElementById('bookingsContent');
+            bookingsContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📅</div>
+                    <h3 class="empty-state-title">You have no bookings yet</h3>
+                    <p class="empty-state-text">Start exploring hotels and make your first booking!</p>
+                    <button onclick="window.location.href='home.html'">Browse Hotels</button>
+                </div>
+            `;
+        }
+
+        function showBookingsError(message) {
+            // Bookings API error - show inline error, DON'T redirect or logout
+            const bookingsContent = document.getElementById('bookingsContent');
+            bookingsContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <h3 class="empty-state-title">Unable to load bookings</h3>
+                    <p class="empty-state-text">${message || 'Failed to load your bookings. Please try again later.'}</p>
+                    <button onclick="location.reload()">Retry</button>
+                </div>
+            `;
+        }
+
+        function showErrorState(message) {
+            const bookingsContent = document.getElementById('bookingsContent');
+            bookingsContent.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <h3 class="empty-state-title">Unable to load bookings</h3>
+                    <p class="empty-state-text">${message}</p>
+                    <button onclick="location.reload()">Retry</button>
+                </div>
+            `;
+        }
+
+        function renderBookings(bookings) {
+            const bookingsContent = document.getElementById('bookingsContent');
+            
+            // Sort bookings by date (newest first)
+            const sortedBookings = bookings.sort((a, b) => 
+                new Date(b.check_in) - new Date(a.check_in)
+            );
+
+            bookingsContent.innerHTML = sortedBookings.map(booking => {
+                const checkIn = new Date(booking.check_in);
+                const checkOut = new Date(booking.check_out);
+                const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                const isUpcoming = checkIn > new Date();
+                const status = booking.status || (isUpcoming ? 'upcoming' : 'completed');
+
+                return `
+                    <div class="booking-card">
+                        <div class="booking-header">
+                            <div>
+                                <div class="booking-hotel-name">${booking.hotel_name}</div>
+                                <div class="booking-id">Booking ID: ${booking.id}</div>
+                            </div>
+                            <span class="booking-status ${status}">${status}</span>
+                        </div>
+                        
+                        <div class="booking-details">
+                            <div class="booking-detail-item">
+                                <span class="booking-detail-label">Check-in</span>
+                                <span class="booking-detail-value">${formatDate(booking.check_in)}</span>
+                            </div>
+                            <div class="booking-detail-item">
+                                <span class="booking-detail-label">Check-out</span>
+                                <span class="booking-detail-value">${formatDate(booking.check_out)}</span>
+                            </div>
+                            <div class="booking-detail-item">
+                                <span class="booking-detail-label">Duration</span>
+                                <span class="booking-detail-value">${nights} night${nights !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div class="booking-detail-item">
+                                <span class="booking-detail-label">Guests</span>
+                                <span class="booking-detail-value">${booking.guests} guest${booking.guests !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div class="booking-detail-item">
+                                <span class="booking-detail-label">Total Price</span>
+                                <span class="booking-detail-value">₹${booking.total_price.toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+
+
+        // Logout functionality with modal
+        window.logout = function() {
+            showLogoutModal();
+        };
+
+        function showLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            const cancelBtn = document.getElementById('logoutCancelBtn');
+            const confirmBtn = document.getElementById('logoutConfirmBtn');
+            
+            modal.classList.add('show');
+            cancelBtn.focus();
+            
+            const focusableElements = modal.querySelectorAll('button');
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+            
+            function trapFocus(e) {
+                if (e.key === 'Tab') {
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstElement) {
+                            lastElement.focus();
+                            e.preventDefault();
+                        }
+                    } else {
+                        if (document.activeElement === lastElement) {
+                            firstElement.focus();
+                            e.preventDefault();
+                        }
+                    }
+                }
+                if (e.key === 'Escape') {
+                    hideLogoutModal();
+                }
+            }
+            
+            modal.addEventListener('keydown', trapFocus);
+            
+            function handleCancel() {
+                hideLogoutModal();
+                cleanup();
+            }
+            
+            function handleConfirm() {
+                hideLogoutModal();
+                cleanup();
+                
+                // SECURITY: Clear ALL client-side data on logout
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                window.location.href = 'login.html';
+            }
+            
+            function handleOverlayClick(e) {
+                if (e.target === modal) {
+                    hideLogoutModal();
+                    cleanup();
+                }
+            }
+            
+            function cleanup() {
+                cancelBtn.removeEventListener('click', handleCancel);
+                confirmBtn.removeEventListener('click', handleConfirm);
+                modal.removeEventListener('click', handleOverlayClick);
+                modal.removeEventListener('keydown', trapFocus);
+            }
+            
+            cancelBtn.addEventListener('click', handleCancel);
+            confirmBtn.addEventListener('click', handleConfirm);
+            modal.addEventListener('click', handleOverlayClick);
+        }
+        
+        function hideLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            modal.classList.remove('show');
+        }
+
+        // Initialize page
+        // Step 1: Check authentication (based on authToken presence only)
+        // Step 2: If authenticated, initialize page and load bookings
+        // Step 3: If not authenticated, redirect to login
+        if (checkAuthentication()) {
+            initializeAuthenticatedPage();
+        }
+    </script>
+</body>
+</html>
