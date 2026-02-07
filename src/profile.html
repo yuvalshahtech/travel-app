@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - Heavenly</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <link rel="icon" href="http://localhost:8000/uploads/logo/heavenly_logo_png.png">
     <style>
         :root {
             --brand-red: #d90429;
@@ -50,6 +50,16 @@
             font-weight: bold;
             color: var(--brand-red);
             text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo img {
+            height: 36px;
+            width: auto;
+            display: block;
+            object-fit: contain;
         }
 
         .header-actions {
@@ -133,10 +143,31 @@
         }
 
         .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
             text-align: center;
             padding: 60px 20px;
             color: var(--grey);
             font-size: 16px;
+        }
+
+        .loading-logo {
+            height: 48px;
+            width: auto;
+            object-fit: contain;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
 
         .empty-state {
@@ -470,7 +501,7 @@
 <body>
     <header>
         <div class="header-content">
-            <a href="home.html" class="logo">✈️ Heavenly</a>
+            <a href="home.html" class="logo"><img src="http://localhost:8000/uploads/logo/heavenly_logo_png.png" alt="Heavenly logo"> Heavenly</a>
             <div class="header-actions">
                 <button onclick="window.location.href='home.html'">Home</button>
                 <button id="headerBecomeHostBtn" aria-label="Become a Host - Coming Soon">Become a Host</button>
@@ -520,7 +551,10 @@
         <div class="bookings-container">
             <h2 class="section-title">Booking History</h2>
             <div id="bookingsContent">
-                <div class="loading">Loading your bookings...</div>
+                <div class="loading">
+                    <img src="http://localhost:8000/uploads/logo/heavenly_logo_png.png" alt="Heavenly logo" class="loading-logo">
+                    <div>Loading your bookings...</div>
+                </div>
             </div>
         </div>
     </div>
