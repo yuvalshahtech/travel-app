@@ -13,6 +13,29 @@ A modern hotel search and booking platform with interactive map-based browsing, 
 - 📍 **Location-Based Discovery** – City search with real-time results
 - 💳 **Booking Interface** – Clean reservation UI with pricing details
 
+## Transparent Pricing – E-Bill System
+
+When users click **"Book Now"** on a hotel detail page, they see a detailed price invoice (E-Bill) before confirming their booking. This ensures complete transparency and builds trust.
+
+### E-Bill Features
+
+**Detailed Breakdown Displayed:**
+- Base price per night × number of nights
+- Cleaning fee (₹500 per stay)
+- Platform service fee (10% of base costs)
+- GST / Taxes (18% government tax)
+- **Final Total** (highlighted in red)
+
+**Trust Signal:**
+- ✔ **"No hidden charges"** badge in green
+- Explicit message: *"This is the final amount. No extra fees will be charged at checkout."*
+
+**User Actions:**
+- **Edit Dates** – Return to date picker
+- **Confirm & Book** – Submit booking
+
+This feature directly addresses typical booking platform issues (like Airbnb's surprise fees) by showing the complete price breakdown upfront, eliminating checkout surprises.
+
 ## Project Structure
 
 ```
