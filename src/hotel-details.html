@@ -1080,24 +1080,29 @@
 
         // Helper: Check if a date falls within any blocked date range
         function isDateBlocked(date) {
-            const dateTime = startOfDay(date).getTime();
+            // Convert date to YYYY-MM-DD string format for reliable comparison
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            
             return blockedDateRanges.some(range => {
-                const startTime = new Date(range.start).getTime();
-                const endTime = new Date(range.end).getTime();
-                return dateTime >= startTime && dateTime <= endTime;
+                // Backend uses INCLUSIVE check-in and EXCLUSIVE check-out
+                // So a booking from 2026-02-10 to 2026-02-12 blocks Feb 10 and 11, but NOT Feb 12
+                return dateStr >= range.start && dateStr < range.end;
             });
         }
 
         // Helper: Check if a date range overlaps with any blocked dates
         function isRangeBlocked(startDate, endDate) {
             if (!startDate || !endDate) return false;
-            const start = startOfDay(startDate).getTime();
-            const end = startOfDay(endDate).getTime();
+            
+            // Convert to YYYY-MM-DD string format for reliable comparison
+            const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
+            const endStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+            
             return blockedDateRanges.some(range => {
-                const rangeStart = new Date(range.start).getTime();
-                const rangeEnd = new Date(range.end).getTime();
-                // Check if ranges overlap
-                return !(end < rangeStart || start > rangeEnd);
+                // Check if the user's selected range overlaps with any blocked range
+                // User's endStr is exclusive (they're checking out), blocked range.end is also exclusive
+                // Ranges overlap if: userStart < blockedEnd AND userEnd > blockedStart
+                return startStr < range.end && endStr > range.start;
             });
         }
 
@@ -1411,10 +1416,44 @@
 
             render();
 
+            // Reset function to clear all internal state and re-render clean calendar
+            function reset() {
+                console.log('[CALENDAR] Resetting internal state');
+                selectedStart = null;
+                selectedEnd = null;
+                
+                // Reset helper text
+                helper.textContent = 'Select check-in date';
+                helper.classList.remove('highlight');
+                
+                // Reset summary dates
+                checkInDate.textContent = 'Check-in';
+                checkInDate.classList.add('empty');
+                checkOutDate.textContent = 'Check-out';
+                checkOutDate.classList.add('empty');
+                
+                // Hide nights display
+                nightsDisplay.classList.add('hidden');
+                
+                // Clear all stale CSS classes from calendar grid
+                grid.querySelectorAll('[class*="calendar-day"]').forEach(cell => {
+                    cell.classList.remove('selected', 'check-in', 'check-out', 'in-range');
+                });
+                
+                // Reset to current month
+                const today = startOfDay(minDate);
+                currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                
+                // Full re-render
+                render();
+                console.log('[CALENDAR] Reset complete - calendar ready for fresh selection');
+            }
+
             return {
                 element: root,
                 getRange: () => ({ start: selectedStart, end: selectedEnd }),
-                render: render  // Expose render to refresh calendar when blocked dates are fetched
+                render: render,  // Expose render to refresh calendar when blocked dates are fetched
+                reset: reset     // Expose reset to clear all internal state
             };
         }
 
@@ -1574,10 +1613,10 @@
                         <strong id="confirmGuests"></strong>
                     </div>
                 </div>
-                <div class="confirmation-question">Would you like to book this hotel for another date?</div>
+                <div class="confirmation-question">Your booking is confirmed! What would you like to do next?</div>
                 <div class="confirmation-buttons">
-                    <button class="confirmation-button primary" id="confirmBookAgainBtn">Book another date</button>
-                    <button class="confirmation-button secondary" id="confirmBackBtn">Back to hotels</button>
+                    <button class="confirmation-button primary" id="confirmBookAgainBtn">Book this hotel again</button>
+                    <button class="confirmation-button secondary" id="confirmBackBtn">Go to My Profile</button>
                 </div>
             `;
 
@@ -1589,13 +1628,16 @@
             wrapper.appendChild(actionBtn);
             wrapper.appendChild(priceSummary);
             wrapper.appendChild(note);
-            wrapper.appendChild(confirmationCard);
             container.appendChild(wrapper);
+            
+            // CRITICAL: Append confirmation card OUTSIDE wrapper so it's not hidden when wrapper is hidden
+            container.appendChild(confirmationCard);
 
             let selectedStart = null;
             let selectedEnd = null;
             let guests = guestSelector.getValue();
             let isBooked = false;
+            let bookingSuccess = false; // Explicit state for booking completion
 
             function resetAvailability() {
                 messageEl.className = 'availability-message';
@@ -1630,13 +1672,14 @@
             }
 
             function showConfirmation() {
-                // Hide booking section
+                // CRITICAL: Set state FIRST
+                bookingSuccess = true;
+                isBooked = true;
+
+                // STEP 1: Hide the booking form wrapper
                 wrapper.style.display = 'none';
 
-                // Show confirmation card
-                confirmationCard.classList.add('visible');
-
-                // Populate confirmation details
+                // STEP 2: Populate confirmation card with REAL booking data
                 const nights = Math.max(1, Math.round((selectedEnd - selectedStart) / (1000 * 60 * 60 * 24)));
                 document.getElementById('confirmHotelName').textContent = hotel.name;
                 document.getElementById('confirmCheckIn').textContent = formatDateLabel(selectedStart);
@@ -1644,37 +1687,79 @@
                 document.getElementById('confirmNights').textContent = `${nights} night${nights !== 1 ? 's' : ''}`;
                 document.getElementById('confirmGuests').textContent = `${guests} guest${guests !== 1 ? 's' : ''}`;
 
-                isBooked = true;
+                // STEP 3: Show confirmation card with animation
+                confirmationCard.classList.add('visible');
+                
+                // STEP 4: Scroll to confirmation card so user sees it immediately
+                setTimeout(() => {
+                    confirmationCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+
+                // Log for debugging
+                console.log('[BOOKING] State set - bookingSuccess:', bookingSuccess);
+                console.log('[BOOKING] Confirmation displayed with:');
+                console.log('  - Hotel:', hotel.name);
+                console.log('  - Check-in:', formatDateLabel(selectedStart));
+                console.log('  - Check-out:', formatDateLabel(selectedEnd));
+                console.log('  - Nights:', nights);
+                console.log('  - Guests:', guests);
             }
 
+            // Expose showConfirmation to global scope for console access
+            window.showConfirmation = showConfirmation;
+
             function resetBooking() {
-                // Hide confirmation card
+                // CRITICAL: Reset state FIRST
+                bookingSuccess = false;
+                isBooked = false;
+
+                // STEP 1: Hide confirmation card
                 confirmationCard.classList.remove('visible');
 
-                // Show booking section
+                // STEP 2: Show booking form again
                 wrapper.style.display = 'block';
 
-                // Reset selection
+                // STEP 3: Reset ALL date and guest selections (both outer scope and calendar)
                 selectedStart = null;
                 selectedEnd = null;
                 guests = 1;
                 guestSelector.setValue(1);
 
-                // Reset UI
+                // CRITICAL: Reset calendar's internal state and re-render clean
+                if (calendarInstance && calendarInstance.reset) {
+                    console.log('[RESET] Calling calendar.reset()');
+                    calendarInstance.reset();
+                }
+
+                // STEP 4: Reset all UI elements
                 checkInChip.querySelector('strong').textContent = '--';
                 checkOutChip.querySelector('strong').textContent = '--';
                 resetAvailability();
-                updateActionState();
-                isBooked = false;
+                
+                // STEP 5: Reset button state
+                actionBtn.textContent = 'Book Now';
+                actionBtn.disabled = true;
+                messageEl.textContent = 'Select dates to continue';
+                messageEl.className = 'availability-message';
+                priceSummary.style.display = 'none';
 
-                // Scroll to booking section
-                wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                // Scroll to booking section so user can select new dates
+                setTimeout(() => {
+                    wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+
+                console.log('[BOOKING] Reset complete - all state cleared, calendar ready for new dates');
             }
 
+            // Expose resetBooking to global scope for console access
+            window.resetBooking = resetBooking;
+
             // Setup confirmation button handlers
-            document.getElementById('confirmBookAgainBtn').addEventListener('click', resetBooking);
+            document.getElementById('confirmBookAgainBtn').addEventListener('click', () => {
+                window.location.reload();
+            });
             document.getElementById('confirmBackBtn').addEventListener('click', () => {
-                goBack();
+                window.location.href = 'profile.html';
             });
 
 
@@ -1713,6 +1798,7 @@
                     return;
                 }
 
+                // Prevent duplicate submissions
                 actionBtn.textContent = 'Processing...';
                 actionBtn.disabled = true;
 
@@ -1747,10 +1833,19 @@
 
                     console.log('[BOOKING] Sending booking request:', bookingPayload);
                     const result = await createBooking(bookingPayload, authToken);
-                    console.log('[BOOKING] Response:', result);
+                    console.log('[BOOKING] Response status: 200/201');
+                    console.log('[BOOKING] Response data:', result);
 
-                    // Show confirmation card instead of just a message
+                    // CRITICAL: Only proceed if API succeeded
+                    // Refresh blocked dates to include the newly booked dates
+                    console.log('[BOOKING] Refreshing calendar with newly booked dates');
+                    await fetchBlockedDates(hotel.id);
+
+                    // CRITICAL: Show confirmation card ONLY after booking API succeeds
+                    messageEl.className = 'availability-message success';
+                    messageEl.textContent = 'Booking confirmed!';
                     showConfirmation();
+                    
                 } catch (error) {
                     console.error('[BOOKING ERROR]', error);
                     
@@ -1760,12 +1855,18 @@
                         setTimeout(() => {
                             window.location.href = 'login.html';
                         }, 2000);
+                        return;
                     }
                     
                     messageEl.className = 'availability-message error';
                     messageEl.textContent = `Booking failed: ${error.message}`;
-                    actionBtn.textContent = 'Book Now';
-                    updateActionState();
+                    
+                } finally {
+                    // ALWAYS restore button to initial state if booking NOT successful
+                    if (!bookingSuccess) {
+                        actionBtn.textContent = 'Book Now';
+                        updateActionState();
+                    }
                 }
             });
         }

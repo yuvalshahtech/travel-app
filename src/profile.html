@@ -762,13 +762,6 @@
                                 <span class="booking-detail-value">₹${booking.total_price.toLocaleString('en-IN')}</span>
                             </div>
                         </div>
-                        
-                        ${status === 'upcoming' ? `
-                            <div class="booking-actions">
-                                <button class="btn-secondary" onclick="viewBookingDetails('${booking.id}')">View Details</button>
-                                <button class="btn-danger" onclick="cancelBooking('${booking.id}')">Cancel Booking</button>
-                            </div>
-                        ` : ''}
                     </div>
                 `;
             }).join('');
@@ -780,17 +773,7 @@
             return date.toLocaleDateString('en-US', options);
         }
 
-        window.viewBookingDetails = function(bookingId) {
-            alert(`View details for booking ${bookingId}\n\nThis feature will be implemented to show full booking details.`);
-        };
 
-        window.cancelBooking = function(bookingId) {
-            if (confirm(`Are you sure you want to cancel booking ${bookingId}?\n\nThis action cannot be undone.`)) {
-                alert(`Booking ${bookingId} has been cancelled.\n\nA cancellation confirmation email has been sent.`);
-                // Reload bookings
-                fetchBookingHistory();
-            }
-        };
 
         // Logout functionality with modal
         window.logout = function() {
