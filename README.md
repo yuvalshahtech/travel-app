@@ -39,6 +39,52 @@ travel-app/
 └── README.md           # Project documentation
 ```
 
+## Environment Setup
+
+Before running the application, you need to configure environment variables in a `.env` file in the project root. This file contains sensitive credentials and **should never be committed to git**.
+
+### Generating the JWT Secret
+
+The JWT secret is a base64-encoded cryptographically secure string used to sign authentication tokens (HS256 algorithm). Generate it using Python:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+This will output a 44-character string like: `AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_`
+
+### Required Environment Variables
+
+Create a `.env` file in the project root with the following variables:
+
+```
+# JWT Authentication
+JWT_SECRET_KEY=<your-generated-secret-here>
+
+# Email Service (Brevo/Sendinblue)
+BREVO_API_KEY=<your-brevo-api-key>
+SENDER_EMAIL=<your-sender-email@example.com>
+SENDER_NAME=Heavenly
+
+# Development/Production
+DEV_MODE=True
+```
+
+**Where to get these values:**
+- **JWT_SECRET_KEY**: Generate using the command above
+- **BREVO_API_KEY**: Get from your Brevo account dashboard (https://app.brevo.com/settings/keys/api)
+- **SENDER_EMAIL**: Email address authorized to send from your Brevo account
+- **SENDER_NAME**: Display name for emails (default: "Heavenly")
+- **DEV_MODE**: Set to `True` for local development, `False` for production
+
+### Security Best Practices
+
+⚠️ **Critical**: Never hardcode secrets or commit `.env` to git. The `.gitignore` file already excludes it. 
+- Each environment (local, staging, production) should have different secrets
+- Rotate JWT secrets periodically in production
+- Keep BREVO_API_KEY private and never share it
+- For production deployment, use environment variable injection instead of `.env` files
+
 ## First-Time Setup (Developers)
 
 1) Clone the repo
