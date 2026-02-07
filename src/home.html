@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Explorer - Discover Hotels</title>
+    <title>Heavenly – Discover Hotels</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
     <style>
         * {
@@ -199,6 +199,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 12px;
         }
 
         .hotel-price {
@@ -364,15 +365,86 @@
                 transform: translateY(0);
             }
         }
+
+        /* Coming Soon Modal (Host Onboarding) */
+        .coming-soon-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .coming-soon-modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .coming-soon-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 420px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            animation: slideUp 0.3s ease;
+        }
+
+        .coming-soon-modal-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .coming-soon-modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 12px;
+        }
+
+        .coming-soon-modal-message {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .coming-soon-modal-close {
+            background: #FF5A5F;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .coming-soon-modal-close:hover {
+            background: #E74C52;
+            transform: translateY(-1px);
+        }
+
+        .coming-soon-modal-close:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="header-container">
-            <a href="home.html" class="logo">✈️ Travel Explorer</a>
+            <a href="home.html" class="logo">✈️ Heavenly</a>
             <div class="user-menu">
                 <span id="userEmail" style="color: #666; font-size: 14px;"></span>
                 <button class="profile-btn" onclick="window.location.href='profile.html'" aria-label="View your profile">My Profile</button>
+                <button class="profile-btn" id="headerBecomeHostBtn" aria-label="Become a Host - Coming Soon">Become a Host</button>
                 <button class="logout-btn" onclick="logout()" aria-label="Logout">Logout</button>
             </div>
         </div>
@@ -386,6 +458,20 @@
                 <button class="logout-modal-btn logout-modal-btn-cancel" id="logoutCancelBtn">Cancel</button>
                 <button class="logout-modal-btn logout-modal-btn-logout" id="logoutConfirmBtn">Logout</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Coming Soon Modal - Host Onboarding -->
+    <div class="coming-soon-modal-overlay" id="comingSoonModal" role="dialog" aria-modal="true" aria-labelledby="comingSoonTitle">
+        <div class="coming-soon-modal">
+            <span class="coming-soon-modal-icon" aria-hidden="true">🏠</span>
+            <h2 class="coming-soon-modal-title" id="comingSoonTitle">Become a Host – Coming Soon</h2>
+            <p class="coming-soon-modal-message">
+                Host onboarding will be unlocked in Version 2.
+                <br>
+                We're building tools to help you list, manage, and track your properties.
+            </p>
+            <button class="coming-soon-modal-close" id="comingSoonCloseBtn">Got it, thanks!</button>
         </div>
     </div>
 
@@ -423,6 +509,50 @@
     </script>
     <script type="module">
         import { getRecentHotels, getHotelsByCity } from './services/api.js';
+
+        // Initialize header "Become a Host" button handler
+        function initializeHeaderBecomeHostButton() {
+            const headerBtn = document.getElementById('headerBecomeHostBtn');
+            if (headerBtn) {
+                headerBtn.addEventListener('click', () => {
+                    const modal = document.getElementById('comingSoonModal');
+                    if (modal) {
+                        modal.classList.add('show');
+                    }
+                });
+            }
+        }
+
+        // Initialize on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeHeaderBecomeHostButton);
+        } else {
+            initializeHeaderBecomeHostButton();
+        }
+
+        // Setup coming-soon modal close handlers
+        document.getElementById('comingSoonCloseBtn').addEventListener('click', () => {
+            const modal = document.getElementById('comingSoonModal');
+            modal.classList.remove('show');
+        });
+
+        // Close coming-soon modal when clicking the overlay
+        document.getElementById('comingSoonModal').addEventListener('click', (e) => {
+            if (e.target.id === 'comingSoonModal') {
+                e.target.classList.remove('show');
+            }
+        });
+
+        // Close coming-soon modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('comingSoonModal');
+                if (modal.classList.contains('show')) {
+                    modal.classList.remove('show');
+                }
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             // Check if user is logged in
             const userEmail = localStorage.getItem('userEmail');
@@ -512,6 +642,7 @@
         function viewHotelDetails(hotelId) {
             window.location.href = `hotel-details.html?id=${hotelId}`;
         }
+
 
         function logout() {
             // Show custom modal every time
