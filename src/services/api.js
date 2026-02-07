@@ -1,4 +1,4 @@
-// Frontend API service for Travel Explorer
+// Frontend API service for Heavenly
 // Vanilla JavaScript fetch wrapper for backend endpoints
 
 const API_BASE = (typeof window !== 'undefined' && window.__API_BASE__) ? window.__API_BASE__ : 'http://localhost:8000';

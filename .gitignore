@@ -7,18 +7,13 @@
 *.db
 *.sqlite
 *.sqlite3
-auth.db
 
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+*.pyc
+*.pyo
+*.pyd
 *.egg-info/
-.eggs/
-dist/
-build/
 venv/
 env/
 ENV/
@@ -28,48 +23,14 @@ ENV/
 .idea/
 *.swp
 *.swo
-*.swn
 *~
-*.sublime-project
-*.sublime-workspace
-.code-workspace
 
 # Operating System Files
 .DS_Store
-.AppleDouble
-.LSOverride
 Thumbs.db
-ehthumbs.db
-Desktop.ini
 
-# Logs
+# Logs and Temp Files
 *.log
-logs/
-
-# Temporary Files
 *.tmp
-*.temp
-.cache/
-.pytest_cache/
-
-# Node.js (if using for frontend tooling)
-node_modules/
-npm-debug.log
-yarn-error.log
-package-lock.json
-
-# Frontend Build Artifacts
-.next/
-out/
-.nuxt/
-dist/
-
-# Test Files and Documentation (production cleanup)
-test_*.py
-PRODUCTION_*.py
-*_IMPLEMENTATION.md
-test-bookings.html
-
-# Local Scripts
-set_brevo_env.ps1
-*.ps1
+*.bak
+*.old
