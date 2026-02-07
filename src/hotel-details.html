@@ -690,6 +690,169 @@
             color: #111;
         }
 
+        /* Price Breakdown Styles */
+        .price-breakdown-card {
+            background: white;
+            border: 1px solid #e9e9e9;
+            border-radius: 10px;
+            padding: 14px;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .price-breakdown-card.visible {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .breakdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 0;
+        }
+
+        .breakdown-header:hover {
+            opacity: 0.8;
+        }
+
+        .breakdown-toggle {
+            font-size: 18px;
+            transition: transform 0.2s ease;
+            color: #666;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .breakdown-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .breakdown-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .breakdown-total {
+            font-size: 15px;
+            font-weight: 700;
+            color: #222;
+        }
+
+        .breakdown-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .breakdown-details.open {
+            max-height: 500px;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 10px 0;
+            border-top: 1px solid #f0f0f0;
+            font-size: 13px;
+            gap: 12px;
+        }
+
+        .breakdown-item:first-child {
+            border-top: none;
+            padding-top: 12px;
+        }
+
+        .breakdown-label {
+            flex: 1;
+            color: #555;
+        }
+
+        .breakdown-label-main {
+            font-weight: 600;
+            color: #333;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .breakdown-label-sub {
+            font-size: 11px;
+            color: #888;
+            margin-top: 2px;
+            display: block;
+            line-height: 1.3;
+        }
+
+        .breakdown-value {
+            text-align: right;
+            font-weight: 600;
+            color: #222;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .breakdown-separator {
+            height: 1px;
+            background: #e9e9e9;
+            margin: 8px 0;
+        }
+
+        .breakdown-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            margin-top: 4px;
+            border-top: 2px solid #e9e9e9;
+        }
+
+        .breakdown-total-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #222;
+        }
+
+        .breakdown-total-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--brand-red);
+        }
+
+        .breakdown-trust-signal {
+            background: #ecfdf3;
+            border: 1px solid #abefc6;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-top: 12px;
+            font-size: 12px;
+            color: #027a48;
+            line-height: 1.4;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .breakdown-trust-icon {
+            margin-right: 4px;
+        }
+
         .booking-button[disabled] {
             background: #ddd;
             cursor: not-allowed;
@@ -1686,6 +1849,10 @@
             const priceSummary = document.createElement('div');
             priceSummary.className = 'price-summary';
 
+            // Price Breakdown Card Component
+            const priceBreakdownCard = document.createElement('div');
+            priceBreakdownCard.className = 'price-breakdown-card';
+
             const note = document.createElement('p');
             note.style.marginTop = '4px';
             note.style.color = '#888';
@@ -1733,6 +1900,7 @@
             wrapper.appendChild(messageEl);
             wrapper.appendChild(actionBtn);
             wrapper.appendChild(priceSummary);
+            wrapper.appendChild(priceBreakdownCard);
             wrapper.appendChild(note);
             container.appendChild(wrapper);
             
@@ -1749,6 +1917,106 @@
                 messageEl.className = 'availability-message';
                 messageEl.textContent = 'Select dates to continue';
                 priceSummary.style.display = 'none';
+                priceBreakdownCard.style.display = 'none';
+            }
+
+            // Price breakdown configuration
+            const FEES = {
+                platformMaintenance: { base: 0, percent: 2, min: 0 },
+                hostSupport: { base: 0, percent: 2, min: 0 },
+                taxRate: 0.05 // 5% tax
+            };
+
+            // Calculate price breakdown components
+            function calculateBreakdown(basePrice, nights) {
+                const baseStayPrice = basePrice * nights;
+                const platformFee = Math.max(0, baseStayPrice * (FEES.platformMaintenance.percent / 100));
+                const hostSupportFee = Math.max(0, baseStayPrice * (FEES.hostSupport.percent / 100));
+                const subtotalBeforeTax = baseStayPrice + platformFee + hostSupportFee;
+                const taxAmount = subtotalBeforeTax * FEES.taxRate;
+                const total = baseStayPrice + platformFee + hostSupportFee + taxAmount;
+
+                return {
+                    baseStayPrice: Math.round(baseStayPrice),
+                    platformFee: Math.round(platformFee),
+                    hostSupportFee: Math.round(hostSupportFee),
+                    taxAmount: Math.round(taxAmount),
+                    total: Math.round(total),
+                    nights: nights,
+                    pricePerNight: Math.round(basePrice)
+                };
+            }
+
+            // Render price breakdown card
+            function renderPriceBreakdown(breakdown) {
+                const isExpanded = priceBreakdownCard.classList.contains('visible');
+                
+                priceBreakdownCard.innerHTML = `
+                    <div class="breakdown-header">
+                        <div>
+                            <div class="breakdown-title">Price Breakdown</div>
+                            <div class="breakdown-total">₹${breakdown.total.toLocaleString('en-IN')}</div>
+                        </div>
+                        <div class="breakdown-toggle ${isExpanded ? 'open' : ''}">▼</div>
+                    </div>
+                    <div class="breakdown-details ${isExpanded ? 'open' : ''}">
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">
+                                <span class="breakdown-label-main">Base Stay Price</span>
+                                <span class="breakdown-label-sub">₹${breakdown.pricePerNight.toLocaleString('en-IN')} × ${breakdown.nights} night${breakdown.nights > 1 ? 's' : ''} = ₹${breakdown.baseStayPrice.toLocaleString('en-IN')}</span>
+                                <span class="breakdown-label-sub" style="margin-top: 3px; color: #666;">The actual cost of the room</span>
+                            </div>
+                            <div class="breakdown-value">₹${breakdown.baseStayPrice.toLocaleString('en-IN')}</div>
+                        </div>
+                        
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">
+                                <span class="breakdown-label-main">Platform Maintenance Fee</span>
+                                <span class="breakdown-label-sub">2% of base stay price</span>
+                                <span class="breakdown-label-sub" style="margin-top: 3px; color: #666;">Used to keep the platform running smoothly</span>
+                            </div>
+                            <div class="breakdown-value">₹${breakdown.platformFee.toLocaleString('en-IN')}</div>
+                        </div>
+                        
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">
+                                <span class="breakdown-label-main">Host Service Support</span>
+                                <span class="breakdown-label-sub">2% of base stay price</span>
+                                <span class="breakdown-label-sub" style="margin-top: 3px; color: #666;">Covers host assistance and customer support</span>
+                            </div>
+                            <div class="breakdown-value">₹${breakdown.hostSupportFee.toLocaleString('en-IN')}</div>
+                        </div>
+                        
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">
+                                <span class="breakdown-label-main">Local Taxes & Regulations</span>
+                                <span class="breakdown-label-sub">5% of subtotal</span>
+                                <span class="breakdown-label-sub" style="margin-top: 3px; color: #666;">Government-mandated charges</span>
+                            </div>
+                            <div class="breakdown-value">₹${breakdown.taxAmount.toLocaleString('en-IN')}</div>
+                        </div>
+                        
+                        <div class="breakdown-separator"></div>
+                        
+                        <div class="breakdown-total-row">
+                            <div class="breakdown-total-label">Total Payable Amount</div>
+                            <div class="breakdown-total-value">₹${breakdown.total.toLocaleString('en-IN')}</div>
+                        </div>
+                        
+                        <div class="breakdown-trust-signal">
+                            <span class="breakdown-trust-icon">✓</span>No hidden charges — this is the final amount you pay
+                        </div>
+                    </div>
+                `;
+                
+                // Attach toggle handler
+                const header = priceBreakdownCard.querySelector('.breakdown-header');
+                header.addEventListener('click', () => {
+                    const details = priceBreakdownCard.querySelector('.breakdown-details');
+                    const toggle = priceBreakdownCard.querySelector('.breakdown-toggle');
+                    details.classList.toggle('open');
+                    toggle.classList.toggle('open');
+                });
             }
 
             function updateActionState() {
@@ -1759,19 +2027,27 @@
                     actionBtn.disabled = false;
                     messageEl.className = 'availability-message success';
                     
-                    // Calculate and show price
+                    // Calculate breakdown
                     const nights = Math.max(1, Math.round((selectedEnd - selectedStart) / (1000 * 60 * 60 * 24)));
-                    const total = nights * hotel.price;
+                    const breakdown = calculateBreakdown(hotel.price, nights);
+                    
+                    // Show summary preview
                     priceSummary.innerHTML = `
-                        <div><strong>${nights} nights</strong> × ₹${Math.round(hotel.price).toLocaleString('en-IN')} per night</div>
-                        <div style="margin-top:6px;"><strong>Total:</strong> ₹${Math.round(total).toLocaleString('en-IN')}</div>
+                        <div><strong>${nights} nights</strong> × ₹${breakdown.pricePerNight.toLocaleString('en-IN')} per night</div>
+                        <div style="margin-top:6px;"><strong>Total:</strong> ₹${breakdown.total.toLocaleString('en-IN')}</div>
                     `;
                     priceSummary.style.display = 'block';
+                    
+                    // Render and show breakdown card
+                    renderPriceBreakdown(breakdown);
+                    priceBreakdownCard.classList.add('visible');
+                    
                     messageEl.textContent = 'Ready to book!';
                 } else {
                     // Invalid dates or missing selection
                     actionBtn.disabled = true;
                     priceSummary.style.display = 'none';
+                    priceBreakdownCard.classList.remove('visible');
                     messageEl.className = 'availability-message';
                     messageEl.textContent = 'Select dates to continue';
                 }
