@@ -1429,6 +1429,18 @@
         let blockedDateRanges = []; // Store unavailable date ranges from backend
         let calendarInstance = null; // Store calendar instance to refresh after blocked dates are fetched
 
+        // Calculate total payable price for 1 night (includes all fees & taxes)
+        function calculateTotalPayable(basePrice) {
+            const roomCharges = basePrice * 1;
+            const cleaningFee = 500;
+            const subtotal = roomCharges + cleaningFee;
+            const platformFee = subtotal * 0.10;
+            const subtotalBeforeGST = subtotal + platformFee;
+            const gst = subtotalBeforeGST * 0.18;
+            const total = subtotal + platformFee + gst;
+            return Math.round(total);
+        }
+
         const amenityIcons = {
             'Wi-Fi': `<svg class="amenity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M12 20h.01"/></svg>`,
             'Pool': `<svg class="amenity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21c2.5-2 5.5-2 8 0s5.5 2 8 0 5.5-2 8 0"/><path d="M2 16c2.5-2 5.5-2 8 0s5.5 2 8 0 5.5-2 8 0"/></svg>`,
@@ -1536,7 +1548,8 @@
             document.getElementById('reviewCount').textContent = `${hotel.reviews.length} reviews`;
             document.getElementById('roomType').textContent = hotel.room_type || 'Room';
 
-            const priceText = `₹${Math.round(hotel.price).toLocaleString('en-IN')} `;
+            const totalPayable = calculateTotalPayable(hotel.price);
+            const priceText = `₹${totalPayable.toLocaleString('en-IN')} `;
             document.getElementById('priceRow').innerHTML = `${priceText}<span>/ night</span>`;
 
             document.getElementById('infoRoomType').textContent = hotel.room_type || 'Room';
@@ -1875,7 +1888,8 @@
 
             const priceRow = document.createElement('div');
             priceRow.className = 'price-row';
-            priceRow.innerHTML = `₹${Math.round(hotel.price).toLocaleString('en-IN')} <span>/ night</span>`;
+            const totalPayable = calculateTotalPayable(hotel.price);
+            priceRow.innerHTML = `₹${totalPayable.toLocaleString('en-IN')} <span>/ night</span>`;
 
             const dateField = document.createElement('div');
             dateField.className = 'reservation-field';
@@ -2145,12 +2159,12 @@
                     actionBtn.disabled = false;
                     messageEl.className = 'availability-message success';
                     
-                    // Calculate and show price
+                    // Calculate and show TOTAL PAYABLE price (no base price outside E-Bill)
                     const nights = Math.max(1, Math.round((selectedEnd - selectedStart) / (1000 * 60 * 60 * 24)));
-                    const total = nights * hotel.price;
+                    const breakdown = calculateBreakdown(hotel.price, nights);
                     priceSummary.innerHTML = `
-                        <div><strong>${nights} nights</strong> × ₹${Math.round(hotel.price).toLocaleString('en-IN')} per night</div>
-                        <div style="margin-top:6px;"><strong>Total:</strong> ₹${Math.round(total).toLocaleString('en-IN')}</div>
+                        <div><strong>Total for ${nights} night${nights > 1 ? 's' : ''}:</strong> ₹${breakdown.total.toLocaleString('en-IN')}</div>
+                        <div style="margin-top:4px;font-size:12px;color:#666;">Includes all fees & taxes</div>
                     `;
                     priceSummary.style.display = 'block';
                     messageEl.textContent = 'Ready to book!';

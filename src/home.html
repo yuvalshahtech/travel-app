@@ -547,6 +547,18 @@
     <script type="module">
         import { getRecentHotels, getHotelsByCity } from './services/api.js';
 
+        // Calculate total payable price for 1 night (includes all fees & taxes)
+        function calculateTotalPayable(basePrice) {
+            const roomCharges = basePrice * 1;
+            const cleaningFee = 500;
+            const subtotal = roomCharges + cleaningFee;
+            const platformFee = subtotal * 0.10;
+            const subtotalBeforeGST = subtotal + platformFee;
+            const gst = subtotalBeforeGST * 0.18;
+            const total = subtotal + platformFee + gst;
+            return Math.round(total);
+        }
+
         // Helper function to generate branded loading HTML
         function createLoadingHTML(message = 'Loading...') {
             return `<div class="loading">
@@ -660,8 +672,8 @@
                         <div class="hotel-location">${hotel.city}, ${hotel.country}</div>
                         <div class="hotel-footer">
                             <div>
-                                <span class="hotel-price-label">per night</span>
-                                <span class="hotel-price">₹${(Math.round(hotel.price)).toLocaleString('en-IN')}</span>
+                                <span class="hotel-price-label">Total per night</span>
+                                <span class="hotel-price">₹${calculateTotalPayable(hotel.price).toLocaleString('en-IN')}</span>
                             </div>
                             <div class="hotel-rating">
                                 <span class="star">★</span>
