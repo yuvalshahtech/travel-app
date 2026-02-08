@@ -562,6 +562,30 @@
     <script type="module">
         import { API_BASE } from './services/api.js';
 
+        // Calculate total payable price for 1 night (includes all fees & taxes)
+        function calculateTotalPayable(basePrice) {
+            const roomCharges = basePrice * 1;
+            const cleaningFee = 500;
+            const subtotal = roomCharges + cleaningFee;
+            const platformFee = subtotal * 0.10;
+            const subtotalBeforeGST = subtotal + platformFee;
+            const gst = subtotalBeforeGST * 0.18;
+            const total = subtotal + platformFee + gst;
+            return Math.round(total);
+        }
+
+        // Calculate total payable price for multiple nights (includes all fees & taxes)
+        function calculateTotalPayableForBooking(basePrice, nights) {
+            const roomCharges = basePrice * nights;
+            const cleaningFee = 500;
+            const subtotal = roomCharges + cleaningFee;
+            const platformFee = subtotal * 0.10;
+            const subtotalBeforeGST = subtotal + platformFee;
+            const gst = subtotalBeforeGST * 0.18;
+            const total = subtotal + platformFee + gst;
+            return Math.round(total);
+        }
+
         // Initialize header "Become a Host" button handler
         function initializeHeaderBecomeHostButton() {
             const headerBtn = document.getElementById('headerBecomeHostBtn');
@@ -920,8 +944,12 @@
                                 <span class="booking-detail-value">${booking.guests} guest${booking.guests !== 1 ? 's' : ''}</span>
                             </div>
                             <div class="booking-detail-item">
-                                <span class="booking-detail-label">Total Price</span>
-                                <span class="booking-detail-value">₹${booking.total_price.toLocaleString('en-IN')}</span>
+                                <span class="booking-detail-label">Total Payable</span>
+                                <span class="booking-detail-value">₹${(() => {
+                                    const basePrice = nights > 0 ? Math.round(booking.total_price / nights) : booking.total_price;
+                                    const totalPayable = calculateTotalPayableForBooking(basePrice, nights);
+                                    return totalPayable.toLocaleString('en-IN');
+                                })()}</span>
                             </div>
                         </div>
                     </div>
