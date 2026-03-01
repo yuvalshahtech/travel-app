@@ -6,12 +6,12 @@ import logging
 from typing import Optional, Tuple
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from backend.models.models import User, EmailVerification
-from backend.utils.auth import hash_password, verify_password
-from backend.utils.otp import generate_otp, is_otp_expired
-from backend.utils.jwt_auth import create_access_token
-from backend.utils.email import send_otp_email
-from backend.config.settings import settings
+from models.models import User, EmailVerification
+from utils.auth import hash_password, verify_password
+from utils.otp import generate_otp, is_otp_expired
+from utils.jwt_auth import create_access_token
+from utils.email import send_otp_email
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
