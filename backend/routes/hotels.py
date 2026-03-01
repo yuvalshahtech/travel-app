@@ -5,7 +5,7 @@ from pathlib import Path
 import random
 from sqlalchemy.orm import Session
 import json
-from backend.schemas.hotel import (
+from schemas.hotel import (
     HotelDetails,
     AvailabilityRequest,
     AvailabilityResponse,
@@ -14,14 +14,14 @@ from backend.schemas.hotel import (
     UserBooking,
     UserBookingListResponse
 )
-from backend.config.database import get_db
-from backend.models.models import Hotel, Booking, User as UserModel
-from backend.services.hotel_service import HotelService
-from backend.services.booking_service import BookingService
-from backend.services.auth_service import AuthService
-from backend.utils.email import send_booking_confirmation_email
-from backend.utils.jwt_auth import get_current_user_id, get_optional_user_id
-from backend.utils.activity_logger import log_user_activity
+from config.database import get_db
+from models.models import Hotel, Booking, User as UserModel
+from services.hotel_service import HotelService
+from services.booking_service import BookingService
+from services.auth_service import AuthService
+from utils.email import send_booking_confirmation_email
+from utils.jwt_auth import get_current_user_id, get_optional_user_id
+from utils.activity_logger import log_user_activity
 
 router = APIRouter(prefix="/hotels", tags=["hotels"])
 
