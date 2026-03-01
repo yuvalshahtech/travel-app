@@ -6,8 +6,8 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from backend.config.database import SessionLocal
-from backend.models.models import Hotel
+from config.database import SessionLocal
+from models.models import Hotel
 
 def load_sample_data():
     """Load realistic Airbnb-style hotel data"""
