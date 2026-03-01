@@ -6,7 +6,7 @@ import logging
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
-from backend.models.models import Hotel, Booking, UserActivity
+from models.models import Hotel, Booking, UserActivity
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
