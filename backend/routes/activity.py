@@ -27,12 +27,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from backend.config.database import get_db
-from backend.models.models import UserActivity
-from backend.schemas.activity import TrackEventRequest, TrackEventResponse
-from backend.utils.jwt_auth import get_optional_user_id
-from backend.middleware.abuse_protection import check_activity_rate_limit
-from backend.services.analytics_buffer import (
+from config.database import get_db
+from models.models import UserActivity
+from schemas.activity import TrackEventRequest, TrackEventResponse
+from utils.jwt_auth import get_optional_user_id
+from middleware.abuse_protection import check_activity_rate_limit
+from services.analytics_buffer import (
     AnalyticsBuffer,
     BufferedEvent,
     analytics_buffer,
