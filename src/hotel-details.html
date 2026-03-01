@@ -1399,6 +1399,8 @@
     </script>
     <script type="module">
         import { getHotelById, checkHotelAvailability, createBooking } from './services/api.js';
+        import { initTracker, startHotelViewTracking, trackMapOpen, trackReviewsOpen } from './services/tracker.js';
+        initTracker('hotel_details');
 
         // Initialize header "Become a Host" button handler
         // This runs independently of the hotel booking flow
@@ -1565,6 +1567,37 @@
             renderReviews();
             renderMap(hotel.latitude, hotel.longitude, hotel.name);
             renderReservationBox(hotel);
+
+            // ── Engagement Tracking ──
+            startHotelViewTracking(hotel.id);
+
+            // Track map section visibility via IntersectionObserver
+            const mapSection = document.querySelector('.hotel-map-section');
+            if (mapSection) {
+                let mapTracked = false;
+                const mapObs = new IntersectionObserver((entries) => {
+                    if (!mapTracked && entries[0].isIntersecting) {
+                        mapTracked = true;
+                        trackMapOpen(hotel.id);
+                        mapObs.disconnect();
+                    }
+                }, { threshold: 0.3 });
+                mapObs.observe(mapSection);
+            }
+
+            // Track reviews section visibility
+            const reviewsSection = document.getElementById('reviewsList');
+            if (reviewsSection) {
+                let reviewsTracked = false;
+                const revObs = new IntersectionObserver((entries) => {
+                    if (!reviewsTracked && entries[0].isIntersecting) {
+                        reviewsTracked = true;
+                        trackReviewsOpen(hotel.id);
+                        revObs.disconnect();
+                    }
+                }, { threshold: 0.3 });
+                revObs.observe(reviewsSection);
+            }
         }
 
         function formatDateLabel(date) {

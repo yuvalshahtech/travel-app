@@ -24,9 +24,9 @@ def get_secret_key():
     Get JWT secret key from environment at runtime (not import time).
     This ensures .env is loaded before the key is read.
     """
-    secret = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-this-in-production")
-    import sys
-    print(f"[JWT] SECRET_KEY loaded at runtime: {secret[:20]}... (length: {len(secret)})", file=sys.stderr)
+    secret = os.getenv("JWT_SECRET_KEY")
+    if not secret:
+        raise RuntimeError("JWT_SECRET_KEY environment variable is not set")
     return secret
 
 
@@ -68,15 +68,10 @@ def verify_token(token: str) -> dict:
         HTTPException: If token is invalid or expired
     """
     try:
-        import sys
         secret = get_secret_key()
-        print(f"[JWT] Verifying token with SECRET_KEY: {secret[:20]}...", file=sys.stderr)
         payload = jwt.decode(token, secret, algorithms=[ALGORITHM])
-        print(f"[JWT] Token verified successfully. sub={payload.get('sub')}, email={payload.get('email')}", file=sys.stderr)
         return payload
-    except JWTError as e:
-        import sys
-        print(f"[JWT] Token verification failed: {str(e)}", file=sys.stderr)
+    except JWTError:
         raise HTTPException(
             status_code=401,
             detail="Could not validate credentials",
@@ -155,3 +150,39 @@ def get_current_user_email(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     return email
+
+
+def get_optional_user_id(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))) -> Optional[int]:
+    """
+    Extract user ID from JWT token if present (optional authentication).
+    
+    Unlike get_current_user_id, this does NOT raise an exception if token is missing.
+    Returns None for unauthenticated requests.
+    
+    Use this for endpoints that support both authenticated and anonymous access:
+    @router.get("/search")
+    def search(user_id: Optional[int] = Depends(get_optional_user_id)):
+        # user_id is None for anonymous, integer for authenticated
+        pass
+    
+    Args:
+        credentials: HTTP Authorization credentials (optional)
+    
+    Returns:
+        User ID if authenticated, None if not authenticated or invalid token
+    """
+    if not credentials:
+        return None
+    
+    try:
+        token = credentials.credentials
+        payload = verify_token(token)
+        sub = payload.get("sub")
+        
+        if sub is None:
+            return None
+        
+        return int(sub)
+    except (HTTPException, ValueError, TypeError):
+        # Invalid token or conversion error - treat as anonymous
+        return None

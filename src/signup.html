@@ -536,5 +536,9 @@
             eyeClosed.style.display = isPassword ? 'block' : 'none';
         });
     </script>
+    <script type="module">
+        import { initTracker } from './services/tracker.js';
+        initTracker('signup');
+    </script>
 </body>
 </html>

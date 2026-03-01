@@ -41,7 +41,12 @@ export async function getHotelsByCity(city) {
  */
 export async function searchHotels(query) {
   try {
-    const response = await fetch(`${API_BASE}/hotels/search?q=${encodeURIComponent(query)}`);
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    
+    const response = await fetch(`${API_BASE}/hotels/search?q=${encodeURIComponent(query)}`, {
+      headers
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     return Array.isArray(data) ? data.map(normalizeHotel) : [];
@@ -79,7 +84,12 @@ export async function searchHotelsWithFilters(query, filters) {
       url += `&amenities=${filters.amenities.join(',')}`;
     }
 
-    const response = await fetch(url);
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    
+    const response = await fetch(url, {
+      headers
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     return Array.isArray(data) ? data.map(normalizeHotel) : [];
@@ -94,7 +104,12 @@ export async function searchHotelsWithFilters(query, filters) {
  */
 export async function getHotelById(hotelId) {
   try {
-    const response = await fetch(`${API_BASE}/hotels/${hotelId}`);
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    
+    const response = await fetch(`${API_BASE}/hotels/${hotelId}`, {
+      headers
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     return normalizeHotel(data);

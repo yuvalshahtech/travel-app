@@ -1168,6 +1168,8 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module">
         import { searchHotels, searchHotelsWithFilters } from './services/api.js';
+        import { initTracker } from './services/tracker.js';
+        initTracker('search');
 
         // Calculate total payable price for 1 night (includes all fees & taxes)
         function calculateTotalPayable(basePrice) {

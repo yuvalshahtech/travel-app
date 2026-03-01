@@ -561,6 +561,8 @@
 
     <script type="module">
         import { API_BASE } from './services/api.js';
+        import { initTracker } from './services/tracker.js';
+        initTracker('profile');
 
         // Calculate total payable price for 1 night (includes all fees & taxes)
         function calculateTotalPayable(basePrice) {
@@ -656,22 +658,6 @@
         // Based on authToken presence ONLY
         // Bookings API failures NEVER trigger logout
         
-        // DEBUG: Test authentication on page load
-        function testAuth() {
-            const authToken = localStorage.getItem('authToken');
-            console.log('=== AUTH DEBUG ===');
-            console.log('authToken from localStorage:', !!authToken);
-            if (authToken) {
-                console.log('Token preview (first 50 chars):', authToken.substring(0, 50));
-                console.log('Token preview (last 50 chars):', authToken.substring(authToken.length - 50));
-                const decoded = tryDecodeJwt(authToken);
-                console.log('Decoded JWT:', decoded);
-            }
-        }
-
-        // Call test at page start
-        testAuth();
-
         function getAuthToken() {
             const authToken = localStorage.getItem('authToken');
             return authToken;
@@ -732,38 +718,19 @@
                 let userId = payload ? payload.sub : null;
                 
                 if (!userId) {
-                    console.warn('[BOOKINGS] Could not extract userId from JWT, using fallback');
                     userId = 'current';
                 }
-
-                // DEBUG: Log request details
-                console.log('[BOOKINGS] Sending request:');
-                console.log(`  URL: ${API_BASE}/hotels/users/${userId}/bookings`);
-                console.log(`  authToken exists: ${!!authToken}`);
-                if (authToken) {
-                    console.log(`  authToken length: ${authToken.length}`);
-                    console.log(`  authToken starts with "eyJ": ${authToken.startsWith('eyJ')}`);
-                    console.log(`  authToken has 3 parts (JWT): ${(authToken.match(/\./g) || []).length === 2}`);
-                    console.log(`  Full authToken: ${authToken}`);
-                }
-                console.log(`  Authorization header will be: "Bearer ${authToken ? authToken.substring(0, 30) + '...' : 'MISSING'}"`);
-                console.log(`  userId: ${userId}`);
 
                 const headers = {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${authToken}`
                 };
-                console.log('[BOOKINGS] Headers being sent:', headers);
 
                 const response = await fetch(`${API_BASE}/hotels/users/${userId}/bookings`, {
                     headers: headers
                 });
                 
-                console.log(`[BOOKINGS] Response status: ${response.status}`);
-                console.log(`[BOOKINGS] Response headers:`, response.headers);
                 if (response.status === 401) {
-                    const errorText = await response.text();
-                    console.log('[BOOKINGS] 401 Response body:', errorText);
                 }
 
                 // API failure responses are non-critical

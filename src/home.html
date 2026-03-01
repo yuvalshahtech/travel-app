@@ -546,6 +546,8 @@
     </script>
     <script type="module">
         import { getRecentHotels, getHotelsByCity } from './services/api.js';
+        import { initTracker } from './services/tracker.js';
+        initTracker('home');
 
         // Calculate total payable price for 1 night (includes all fees & taxes)
         function calculateTotalPayable(basePrice) {
