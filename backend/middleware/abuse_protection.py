@@ -26,7 +26,7 @@ from typing import Optional, Tuple
 
 from fastapi import HTTPException, Request
 
-from backend.middleware.rate_limiter import (
+from middleware.rate_limiter import (
     SlidingWindowStore,
     _parse_rate,
     activity_session_minute_key,
