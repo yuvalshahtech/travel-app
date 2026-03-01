@@ -78,9 +78,9 @@ from typing import Dict, List, Optional
 from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
-from backend.config.database import SessionLocal
-from backend.models.models import UserActivity
-from backend.services.analytics_buffer import (
+from config.database import SessionLocal
+from models.models import UserActivity
+from services.analytics_buffer import (
     AnalyticsBuffer,
     BufferConfig,
     BufferedEvent,
