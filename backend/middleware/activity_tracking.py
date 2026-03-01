@@ -7,9 +7,9 @@ import logging
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy.orm import Session
-from backend.config.database import SessionLocal
-from backend.models.models import UserActivity
-from backend.utils.jwt_auth import get_current_user_id_from_token
+from config.database import SessionLocal
+from models.models import UserActivity
+from utils.jwt_auth import get_current_user_id_from_token
 
 logger = logging.getLogger(__name__)
 
