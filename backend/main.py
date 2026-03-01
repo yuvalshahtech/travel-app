@@ -11,12 +11,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from backend.routes.auth import router as auth_router
-from backend.routes.hotels import router as hotels_router
-from backend.routes.activity import router as activity_router
-from backend.config.database import init_database
-from backend.middleware.rate_limiter import start_cleanup_task, stop_cleanup_task
-from backend.services.analytics_worker import analytics_worker
+from routes.auth import router as auth_router
+from routes.hotels import router as hotels_router
+from routes.activity import router as activity_router
+from config.database import init_database
+from middleware.rate_limiter import start_cleanup_task, stop_cleanup_task
+from services.analytics_worker import analytics_worker
 
 # Configure logging to see email debugging
 logging.basicConfig(
