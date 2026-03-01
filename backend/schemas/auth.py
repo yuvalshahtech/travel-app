@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 
-class User(BaseModel):
-    """User model for requests"""
+
+class UserLogin(BaseModel):
+    """Request schema for login and signup"""
     email: EmailStr
     password: str

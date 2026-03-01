@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends
+from typing import Optional
 from datetime import date
 from pathlib import Path
 import random
+from sqlalchemy.orm import Session
+import json
 from backend.schemas.hotel import (
     HotelDetails,
     AvailabilityRequest,
@@ -11,42 +14,79 @@ from backend.schemas.hotel import (
     UserBooking,
     UserBookingListResponse
 )
-from backend.utils.database import (
-    get_hotel_by_id,
-    get_recent_hotels,
-    get_hotels_by_city,
-    search_hotels,
-    search_hotels_with_filters,
-    get_overlapping_bookings,
-    create_booking,
-    get_hotel_bookings,
-    merge_date_ranges,
-    get_user_bookings,
-    get_user_by_id
-)
+from backend.config.database import get_db
+from backend.models.models import Hotel, Booking, User as UserModel
+from backend.services.hotel_service import HotelService
+from backend.services.booking_service import BookingService
+from backend.services.auth_service import AuthService
 from backend.utils.email import send_booking_confirmation_email
-from backend.utils.jwt_auth import get_current_user_id
+from backend.utils.jwt_auth import get_current_user_id, get_optional_user_id
+from backend.utils.activity_logger import log_user_activity
 
 router = APIRouter(prefix="/hotels", tags=["hotels"])
 
 UPLOADS_DIR = Path(__file__).resolve().parents[1] / "uploads" / "hotels"
 
-def generate_reviews(hotel):
-    amenities = []
-    if hotel["amenities"]:
+
+def _hget(hotel, key, default=None):
+    if isinstance(hotel, dict):
+        return hotel.get(key, default)
+    return getattr(hotel, key, default)
+
+
+def _parse_amenities(raw_amenities):
+    if raw_amenities is None:
+        return []
+    if isinstance(raw_amenities, list):
+        return raw_amenities
+    if isinstance(raw_amenities, str):
         try:
-            import json
-            amenities = json.loads(hotel["amenities"])
+            return json.loads(raw_amenities)
         except Exception:
-            amenities = []
+            return []
+    return []
 
-    rating = float(hotel["rating"] or 4.2)
-    price = float(hotel["price"] or 0)
-    room_type = (hotel["room_type"] or "").lower()
-    city = hotel["city"] or ""
-    description = (hotel["description"] or "").lower()
 
-    rng = random.Random(int(hotel["id"]))
+def _serialize_hotel_summary(hotel):
+    return {
+        "id": _hget(hotel, "id"),
+        "name": _hget(hotel, "name"),
+        "city": _hget(hotel, "city"),
+        "country": _hget(hotel, "country"),
+        "latitude": _hget(hotel, "latitude"),
+        "longitude": _hget(hotel, "longitude"),
+        "price": _hget(hotel, "price"),
+        "room_type": _hget(hotel, "room_type"),
+        "rating": _hget(hotel, "rating"),
+        "guests": _hget(hotel, "guests") if _hget(hotel, "guests") is not None else 2,
+        "image_url": _hget(hotel, "image_url"),
+        "amenities": _parse_amenities(_hget(hotel, "amenities")),
+    }
+
+
+def _merge_date_ranges(ranges):
+    if not ranges:
+        return []
+    sorted_ranges = sorted(ranges, key=lambda item: item[0])
+    merged = [list(sorted_ranges[0])]
+    for start, end in sorted_ranges[1:]:
+        last_start, last_end = merged[-1]
+        if start <= last_end:
+            merged[-1][1] = max(last_end, end)
+        else:
+            merged.append([start, end])
+    return [(start, end) for start, end in merged]
+
+def generate_reviews(hotel):
+    amenities = _parse_amenities(_hget(hotel, "amenities"))
+
+    rating = float(_hget(hotel, "rating", 4.2) or 4.2)
+    price = float(_hget(hotel, "price", 0) or 0)
+    room_type = (_hget(hotel, "room_type", "") or "").lower()
+    city = _hget(hotel, "city", "") or ""
+    description = (_hget(hotel, "description", "") or "").lower()
+
+    rng = random.Random(int(_hget(hotel, "id")))
 
     if rating >= 4.5:
         review_count = rng.randint(6, 8)
@@ -171,7 +211,7 @@ def generate_reviews(hotel):
     
     # Generate review content
     for idx in range(review_count):
-        name = name_pool[(int(hotel["id"]) + idx * 3) % len(name_pool)]
+        name = name_pool[(int(_hget(hotel, "id")) + idx * 3) % len(name_pool)]
         score = adjusted_ratings[idx]
 
         if score >= 4.5:
@@ -200,56 +240,22 @@ def generate_reviews(hotel):
     return reviews
 
 @router.get("/recent")
-async def get_recent():
+async def get_recent(db: Session = Depends(get_db)):
     """Get recently listed hotels"""
-    import json
-    hotels = get_recent_hotels(limit=10)
+    hotels = HotelService.get_recent_hotels(db=db, limit=10)
     if not hotels:
         return []
     
-    return [
-        {
-            "id": hotel["id"],
-            "name": hotel["name"],
-            "city": hotel["city"],
-            "country": hotel["country"],
-            "latitude": hotel["latitude"],
-            "longitude": hotel["longitude"],
-            "price": hotel["price"],
-            "room_type": hotel["room_type"],
-            "rating": hotel["rating"],
-            "guests": hotel["guests"] if hotel["guests"] is not None else 2,
-            "image_url": hotel["image_url"],
-            "amenities": json.loads(hotel["amenities"]) if hotel["amenities"] else [],
-        }
-        for hotel in hotels
-    ]
+    return [_serialize_hotel_summary(hotel) for hotel in hotels]
 
 @router.get("/city/{city}")
-async def get_by_city(city: str):
+async def get_by_city(city: str, db: Session = Depends(get_db)):
     """Get hotels in a specific city"""
-    import json
-    hotels = get_hotels_by_city(city, limit=50)
+    hotels = HotelService.get_hotels_by_city(db=db, city=city)
     if not hotels:
         return []
     
-    return [
-        {
-            "id": hotel["id"],
-            "name": hotel["name"],
-            "city": hotel["city"],
-            "country": hotel["country"],
-            "latitude": hotel["latitude"],
-            "longitude": hotel["longitude"],
-            "price": hotel["price"],
-            "room_type": hotel["room_type"],
-            "rating": hotel["rating"],
-            "guests": hotel["guests"] if hotel["guests"] is not None else 2,
-            "image_url": hotel["image_url"],
-            "amenities": json.loads(hotel["amenities"]) if hotel["amenities"] else [],
-        }
-        for hotel in hotels
-    ]
+    return [_serialize_hotel_summary(hotel) for hotel in hotels]
 
 @router.get("/search")
 async def search(
@@ -259,7 +265,9 @@ async def search(
     guests: int = Query(None, ge=1),
     min_rating: float = Query(None, ge=0, le=5),
     property_types: str = Query(None),
-    amenities: str = Query(None)
+    amenities: str = Query(None),
+    current_user_id: Optional[int] = Depends(get_optional_user_id),
+    db: Session = Depends(get_db)
 ):
     """
     Search hotels by name, city, or country with optional filters.
@@ -276,7 +284,6 @@ async def search(
     If no filter parameters provided, all hotels matching the search query are returned.
     Filters are applied as: price >= min_price, price <= max_price, guests >= requested value, rating >= min_rating
     """
-    import json
     if not q or len(q) < 2:
         return []
     
@@ -291,9 +298,9 @@ async def search(
         amenities_list = [am.strip() for am in amenities.split(',') if am.strip()]
     
     # Use filtered search function
-    hotels = search_hotels_with_filters(
-        q, 
-        limit=50, 
+    hotels = HotelService.search_hotels_with_filters(
+        db=db,
+        query_text=q,
         min_price=min_price, 
         max_price=max_price,
         guests=guests,
@@ -304,53 +311,62 @@ async def search(
     if not hotels:
         return []
     
-    return [
-        {
-            "id": hotel["id"],
-            "name": hotel["name"],
-            "city": hotel["city"],
-            "country": hotel["country"],
-            "latitude": hotel["latitude"],
-            "longitude": hotel["longitude"],
-            "price": hotel["price"],
-            "room_type": hotel["room_type"],
-            "rating": hotel["rating"],
-            "guests": hotel["guests"] if hotel["guests"] is not None else 2,
-            "image_url": hotel["image_url"],
-            "amenities": json.loads(hotel["amenities"]) if hotel["amenities"] else [],
-        }
-        for hotel in hotels
-    ]
+    # Log search activity (authenticated or anonymous)
+    log_user_activity(
+        user_id=current_user_id,  # None for anonymous, user_id for authenticated
+        action_type="search",
+        activity_event={
+            "query": q,
+            "results_count": len(hotels)
+        },
+        db=db
+    )
+    
+    return [_serialize_hotel_summary(hotel) for hotel in hotels]
 
 @router.get("/{hotel_id}", response_model=HotelDetails)
-async def get_hotel(hotel_id: int):
+async def get_hotel(
+    hotel_id: int,
+    current_user_id: Optional[int] = Depends(get_optional_user_id),
+    db: Session = Depends(get_db)
+):
     """Get hotel details by ID"""
-    import json
-    hotel = get_hotel_by_id(hotel_id)
+    hotel = HotelService.get_hotel_by_id(db=db, hotel_id=hotel_id)
     
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
+    
+    # Log hotel view activity (authenticated or anonymous)
+    log_user_activity(
+        user_id=current_user_id,  # None for anonymous, user_id for authenticated
+        action_type="view",
+        activity_event={
+            "hotel_id": hotel_id,
+            "hotel_name": hotel.name
+        },
+        db=db
+    )
 
     return {
-        "id": hotel["id"],
-        "name": hotel["name"],
-        "city": hotel["city"],
-        "description": hotel["description"],
-        "price": hotel["price"],
-        "room_type": hotel["room_type"],
-        "max_guests": hotel["guests"] if hotel["guests"] is not None else 2,
-        "rating": hotel["rating"],
-        "amenities": json.loads(hotel["amenities"]) if hotel["amenities"] else [],
-        "image": hotel["image_url"],
-        "latitude": hotel["latitude"],
-        "longitude": hotel["longitude"],
+        "id": hotel.id,
+        "name": hotel.name,
+        "city": hotel.city,
+        "description": hotel.description,
+        "price": hotel.price,
+        "room_type": hotel.room_type,
+        "max_guests": hotel.guests if hotel.guests is not None else 2,
+        "rating": hotel.rating,
+        "amenities": _parse_amenities(hotel.amenities),
+        "image": hotel.image_url,
+        "latitude": hotel.latitude,
+        "longitude": hotel.longitude,
         "reviews": generate_reviews(hotel),
     }
 
 @router.post("/availability", response_model=AvailabilityResponse)
-async def check_availability(payload: AvailabilityRequest):
+async def check_availability(payload: AvailabilityRequest, db: Session = Depends(get_db)):
     """Check hotel availability for a date range and guest count"""
-    hotel = get_hotel_by_id(payload.hotel_id)
+    hotel = HotelService.get_hotel_by_id(db=db, hotel_id=payload.hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
 
@@ -363,24 +379,27 @@ async def check_availability(payload: AvailabilityRequest):
     if payload.check_in_date < date.today():
         return {"available": False, "message": "Check-in date cannot be in the past."}
 
-    max_guests = hotel["guests"] if hotel["guests"] is not None else 2
+    max_guests = hotel.guests if hotel.guests is not None else 2
     if payload.number_of_guests > max_guests:
         return {"available": False, "message": "Selected guests exceed max capacity."}
 
-    overlaps = get_overlapping_bookings(
-        payload.hotel_id,
-        payload.check_in_date.isoformat(),
-        payload.check_out_date.isoformat()
+    availability = BookingService.check_availability(
+        db=db,
+        hotel_id=payload.hotel_id,
+        check_in_date=payload.check_in_date.isoformat(),
+        check_out_date=payload.check_out_date.isoformat(),
+        guest_count=payload.number_of_guests
     )
-    if overlaps:
-        return {"available": False, "message": "Hotel is not available for selected dates."}
+    if not availability["available"]:
+        return {"available": False, "message": availability["message"]}
 
     return {"available": True, "message": "Hotel is available for your dates."}
 
 @router.post("/bookings", response_model=BookingResponse)
 async def create_booking_endpoint(
     payload: BookingRequest,
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
 ):
     """
     Create a booking and send confirmation email.
@@ -392,14 +411,14 @@ async def create_booking_endpoint(
     Authentication: Required (JWT token in Authorization header)
     """
     # Get user details from database using authenticated user_id
-    user = get_user_by_id(current_user_id)
+    user = AuthService.get_user_by_id(db=db, user_id=current_user_id)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     
-    user_email = user["email"]
+    user_email = user.email
     user_name = user_email.split('@')[0].title()  # Extract name from email
     
-    hotel = get_hotel_by_id(payload.hotel_id)
+    hotel = HotelService.get_hotel_by_id(db=db, hotel_id=payload.hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
 
@@ -412,32 +431,43 @@ async def create_booking_endpoint(
     if payload.check_in_date < date.today():
         raise HTTPException(status_code=400, detail="Check-in date cannot be in the past.")
 
-    max_guests = hotel["guests"] if hotel["guests"] is not None else 2
+    max_guests = hotel.guests if hotel.guests is not None else 2
     if payload.number_of_guests > max_guests:
         raise HTTPException(status_code=400, detail="Selected guests exceed max capacity.")
 
-    overlaps = get_overlapping_bookings(
-        payload.hotel_id,
-        payload.check_in_date.isoformat(),
-        payload.check_out_date.isoformat()
-    )
-    if overlaps:
-        raise HTTPException(status_code=409, detail="Hotel is not available for selected dates.")
-
-    # Calculate total price
-    num_nights = (payload.check_out_date - payload.check_in_date).days
-    total_price = float(hotel["price"]) * num_nights if hotel["price"] else 0
-
     # Create booking with user_id from JWT token (NOT from payload)
-    booking_id = create_booking(
-        payload.hotel_id,
-        payload.check_in_date.isoformat(),
-        payload.check_out_date.isoformat(),
-        payload.number_of_guests,
-        status="confirmed",
-        user_id=current_user_id,  # From JWT token
-        price=total_price
+    booking_result = BookingService.create_booking(
+        db=db,
+        hotel_id=payload.hotel_id,
+        user_id=current_user_id,
+        check_in_date=payload.check_in_date.isoformat(),
+        check_out_date=payload.check_out_date.isoformat(),
+        guest_count=payload.number_of_guests
     )
+    booking_id = booking_result["booking_id"]
+    pricing = booking_result.get("pricing", {})
+    num_nights = pricing.get("nights", (payload.check_out_date - payload.check_in_date).days)
+    total_price = pricing.get("room_charges", 0)
+    db_booking = db.query(Booking).filter(Booking.booking_id == booking_id).first()
+    
+    # Log booking activity
+    print("BOOKING LOGGER CALLED - user_id:", current_user_id, "hotel:", hotel.name, "booking_id:", booking_id)
+    log_result = log_user_activity(
+        user_id=current_user_id,
+        action_type="booking",
+        activity_event={
+            "message": f"Booked hotel {hotel.name} for {num_nights} nights",
+            "hotel_id": payload.hotel_id,
+            "hotel_name": hotel.name,
+            "booking_id": booking_id,
+            "check_in_date": payload.check_in_date.isoformat(),
+            "check_out_date": payload.check_out_date.isoformat(),
+            "num_nights": num_nights,
+            "total_price": total_price
+        },
+        db=db
+    )
+    print("BOOKING LOGGER RESULT:", log_result)
 
     # DIAGNOSTIC TEST: Direct synchronous call (no threading)
     # This proves whether the email function works at all
@@ -445,13 +475,13 @@ async def create_booking_endpoint(
     print(f"[DIAGNOSTIC] Booking ID: {booking_id}")
     print(f"[DIAGNOSTIC] User email: {user_email}")
     print(f"[DIAGNOSTIC] User name: {user_name}")
-    print(f"[DIAGNOSTIC] Hotel name: {hotel['name']}")
+    print(f"[DIAGNOSTIC] Hotel name: {hotel.name}")
     
     try:
         email_result = send_booking_confirmation_email(
             user_email,  # From JWT authenticated user
             user_name,   # Derived from email
-            hotel["name"],
+            hotel.name,
             payload.check_in_date.isoformat(),
             payload.check_out_date.isoformat()
         )
@@ -468,7 +498,7 @@ async def create_booking_endpoint(
 
 
 @router.get("/{hotel_id}/blocked-dates")
-def get_blocked_dates(hotel_id: int):
+def get_blocked_dates(hotel_id: int, db: Session = Depends(get_db)):
     """
     Get all unavailable (blocked) date ranges for a hotel.
     
@@ -492,12 +522,15 @@ def get_blocked_dates(hotel_id: int):
         404: If hotel does not exist
     """
     # Verify hotel exists
-    hotel = get_hotel_by_id(hotel_id)
+    hotel = HotelService.get_hotel_by_id(db=db, hotel_id=hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
     
     # Fetch all confirmed bookings for this hotel
-    bookings = get_hotel_bookings(hotel_id)
+    bookings = db.query(Booking).filter(
+        Booking.hotel_id == hotel_id,
+        Booking.status == "confirmed"
+    ).order_by(Booking.check_in_date.asc()).all()
     
     # If no bookings, return empty blocked_dates array
     if not bookings:
@@ -508,12 +541,12 @@ def get_blocked_dates(hotel_id: int):
     
     # Convert bookings to date range tuples (check_in, check_out)
     date_ranges = [
-        (booking["check_in_date"], booking["check_out_date"])
+        (booking.check_in_date, booking.check_out_date)
         for booking in bookings
     ]
     
     # Merge overlapping and adjacent ranges
-    merged_ranges = merge_date_ranges(date_ranges)
+    merged_ranges = _merge_date_ranges(date_ranges)
     
     # Convert back to list of dicts with "start" and "end" keys
     blocked_dates = [
@@ -527,7 +560,10 @@ def get_blocked_dates(hotel_id: int):
     }
 
 @router.get("/bookings/my", response_model=UserBookingListResponse)
-def get_my_booking_history(current_user_id: int = Depends(get_current_user_id)):
+def get_my_booking_history(
+    current_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
     """
     Get all bookings for the currently authenticated user.
     
@@ -546,7 +582,7 @@ def get_my_booking_history(current_user_id: int = Depends(get_current_user_id)):
     
     # Get bookings for the AUTHENTICATED user only
     # current_user_id comes from JWT token, not from frontend
-    bookings = get_user_bookings(current_user_id)
+    bookings = BookingService.get_user_booking_history(db=db, user_id=current_user_id)
     
     # Transform database records into UserBooking response format
     user_bookings = []
@@ -554,8 +590,8 @@ def get_my_booking_history(current_user_id: int = Depends(get_current_user_id)):
     
     for booking in bookings:
         # Parse dates
-        check_in = datetime.strptime(booking["check_in_date"], "%Y-%m-%d").date()
-        check_out = datetime.strptime(booking["check_out_date"], "%Y-%m-%d").date()
+        check_in = datetime.strptime(booking.check_in_date, "%Y-%m-%d").date()
+        check_out = datetime.strptime(booking.check_out_date, "%Y-%m-%d").date()
         
         # Calculate number of nights
         num_nights = (check_out - check_in).days
@@ -563,32 +599,40 @@ def get_my_booking_history(current_user_id: int = Depends(get_current_user_id)):
         # Calculate total price
         # Use booking price if stored, otherwise calculate from hotel nightly rate
         try:
-            if booking["price"] is not None:
-                total_price = float(booking["price"])
+            if booking.total_payable is not None:
+                total_price = float(booking.total_payable)
             else:
-                hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+                hotel_nightly_rate = float(booking.price or 0)
                 total_price = hotel_nightly_rate * num_nights
         except (KeyError, TypeError):
-            hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+            hotel_nightly_rate = float(booking.price or 0)
             total_price = hotel_nightly_rate * num_nights
         
         # Determine status
         # If booking has explicit status and it's cancelled, use that
         # Otherwise, determine based on check-in date
-        if booking["status"] == "cancelled":
+        if booking.status == "cancelled":
             status = "cancelled"
         elif check_in > today:
             status = "upcoming"
         else:
             status = "completed"
+
+        hotel_name = "Unknown Hotel"
+        if booking.hotel:
+            hotel_name = booking.hotel.name
+        else:
+            hotel_obj = db.query(Hotel).filter(Hotel.id == booking.hotel_id).first()
+            if hotel_obj:
+                hotel_name = hotel_obj.name
         
         user_bookings.append(UserBooking(
-            id=str(booking["booking_id"]),
-            hotel_id=booking["hotel_id"],
-            hotel_name=booking["hotel_name"],
-            check_in=booking["check_in_date"],
-            check_out=booking["check_out_date"],
-            guests=booking["guests"],
+            id=str(booking.booking_id),
+            hotel_id=booking.hotel_id,
+            hotel_name=hotel_name,
+            check_in=booking.check_in_date,
+            check_out=booking.check_out_date,
+            guests=booking.guests,
             total_price=total_price,
             status=status
         ))
@@ -598,7 +642,8 @@ def get_my_booking_history(current_user_id: int = Depends(get_current_user_id)):
 @router.get("/users/{user_id}/bookings", response_model=UserBookingListResponse)
 def get_user_booking_history(
     user_id: int,
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
 ):
     """
     Get all bookings for a specific user with hotel details.
@@ -613,7 +658,7 @@ def get_user_booking_history(
         raise HTTPException(status_code=403, detail="Forbidden: user mismatch")
 
     # Get user bookings from database
-    bookings = get_user_bookings(current_user_id)
+    bookings = BookingService.get_user_booking_history(db=db, user_id=current_user_id)
     
     # Transform database records into UserBooking response format
     user_bookings = []
@@ -621,8 +666,8 @@ def get_user_booking_history(
     
     for booking in bookings:
         # Parse dates
-        check_in = datetime.strptime(booking["check_in_date"], "%Y-%m-%d").date()
-        check_out = datetime.strptime(booking["check_out_date"], "%Y-%m-%d").date()
+        check_in = datetime.strptime(booking.check_in_date, "%Y-%m-%d").date()
+        check_out = datetime.strptime(booking.check_out_date, "%Y-%m-%d").date()
         
         # Calculate number of nights
         num_nights = (check_out - check_in).days
@@ -630,32 +675,40 @@ def get_user_booking_history(
         # Calculate total price
         # Use booking price if stored, otherwise calculate from hotel nightly rate
         try:
-            if booking["price"] is not None:
-                total_price = float(booking["price"])
+            if booking.total_payable is not None:
+                total_price = float(booking.total_payable)
             else:
-                hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+                hotel_nightly_rate = float(booking.price or 0)
                 total_price = hotel_nightly_rate * num_nights
         except (KeyError, TypeError):
-            hotel_nightly_rate = float(booking["hotel_nightly_rate"] or 0)
+            hotel_nightly_rate = float(booking.price or 0)
             total_price = hotel_nightly_rate * num_nights
         
         # Determine status
         # If booking has explicit status and it's cancelled, use that
         # Otherwise, determine based on check-in date
-        if booking["status"] == "cancelled":
+        if booking.status == "cancelled":
             status = "cancelled"
         elif check_in > today:
             status = "upcoming"
         else:
             status = "completed"
+
+        hotel_name = "Unknown Hotel"
+        if booking.hotel:
+            hotel_name = booking.hotel.name
+        else:
+            hotel_obj = db.query(Hotel).filter(Hotel.id == booking.hotel_id).first()
+            if hotel_obj:
+                hotel_name = hotel_obj.name
         
         user_bookings.append(UserBooking(
-            id=str(booking["booking_id"]),
-            hotel_id=booking["hotel_id"],
-            hotel_name=booking["hotel_name"],
-            check_in=booking["check_in_date"],
-            check_out=booking["check_out_date"],
-            guests=booking["guests"],
+            id=str(booking.booking_id),
+            hotel_id=booking.hotel_id,
+            hotel_name=hotel_name,
+            check_in=booking.check_in_date,
+            check_out=booking.check_out_date,
+            guests=booking.guests,
             total_price=total_price,
             status=status
         ))

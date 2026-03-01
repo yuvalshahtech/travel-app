@@ -1,41 +1,71 @@
-from fastapi import APIRouter, HTTPException
+import time
+import logging
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
 from passlib.exc import UnknownHashError
-from backend.models.user import User
-from backend.utils.database import (
-    user_exists, create_user, get_user_by_email,
-    create_email_verification, get_email_verification, delete_email_verification, email_verification_exists
-)
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime
+from backend.schemas.auth import UserLogin
+from backend.models.models import User as UserModel, EmailVerification  # SQLAlchemy ORM models
+from backend.config.database import get_db
 from backend.utils.auth import hash_password, verify_password
 from backend.utils.otp import generate_otp, get_otp_expiry, is_otp_expired
 from backend.utils.email import send_otp_email
 from backend.utils.jwt_auth import create_access_token
-import sqlite3
+from backend.utils.activity_logger import log_user_activity
+from backend.middleware.abuse_protection import (
+    check_login_rate_limit,
+    check_signup_rate_limit,
+    on_login_success,
+    on_login_failure,
+    constant_time_login,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 @router.post("/signup")
-async def signup(user: User):
+async def signup(
+    request: Request,
+    user: UserLogin,
+    db: Session = Depends(get_db),
+    _rate_check: None = Depends(check_signup_rate_limit),
+):
     """
     Sign up a new user
     Step 1: Store email, hashed password, OTP
     Step 2: Send OTP to email
     Does NOT create user in users table yet
+
+    Rate limited: max 3 signups per IP per hour (configurable).
+    Returns identical response shape for "already exists" and "OTP sent"
+    to prevent user enumeration.
     """
     
-# Case 1: Account already fully created
-    if user_exists(user.email):
-        raise HTTPException(
-            status_code=409,
-            detail="Account already exists. Please log in."
-        )
+    # Case 1: Account already fully created
+    # NOTE: We do NOT reveal that the account exists to prevent enumeration.
+    # The response shape is the same as the success case.
+    existing_user = db.query(UserModel).filter(UserModel.email == user.email).first()
+    if existing_user:
+        # Return same shape as success — the user will discover the conflict
+        # when they try to verify OTP (or they can try logging in).
+        logger.info(f"Signup attempt for existing account: {user.email}")
+        return {
+            "message": "If this email is not already registered, you will receive an OTP shortly.",
+            "email": user.email
+        }
 
     # Case 2: OTP already pending
-    if email_verification_exists(user.email):
-        raise HTTPException(
-            status_code=409,
-            detail="OTP already sent. Please verify your email."
-        )
+    existing_verification = db.query(EmailVerification).filter(EmailVerification.email == user.email).first()
+    if existing_verification:
+        # Same generic response — prevents enumeration of pending signups
+        logger.info(f"Signup attempt with pending OTP: {user.email}")
+        return {
+            "message": "If this email is not already registered, you will receive an OTP shortly.",
+            "email": user.email
+        }
 
     # Hash the password (truncated to 72 bytes internally)
     password_hash = hash_password(user.password)
@@ -46,13 +76,17 @@ async def signup(user: User):
     
     # Store in email_verifications table
     try:
-        verification_id = create_email_verification(
-            user.email,
-            password_hash,
-            otp,
-            expires_at.isoformat()
+        verification = EmailVerification(
+            email=user.email,
+            password_hash=password_hash,
+            otp=otp,
+            expires_at=expires_at
         )
+        db.add(verification)
+        db.commit()
+        db.refresh(verification)
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail="Failed to prepare verification.")
     
     # Send OTP to email (MUST succeed in production - no fallback)
@@ -69,12 +103,12 @@ async def signup(user: User):
         )
     
     return {
-        "message": "Signup prepared. Check your email for OTP.",
+        "message": "If this email is not already registered, you will receive an OTP shortly.",
         "email": user.email
     }
 
 @router.post("/verify-otp")
-async def verify_otp(data: dict):
+async def verify_otp(data: dict, db: Session = Depends(get_db)):
     """
     Verify OTP and create user account
     Step 2: User provides OTP
@@ -87,31 +121,39 @@ async def verify_otp(data: dict):
         raise HTTPException(status_code=400, detail="Email and OTP required.")
     
     # Get verification record
-    verification = get_email_verification(email)
+    verification = db.query(EmailVerification).filter(EmailVerification.email == email).first()
     
     if not verification:
         raise HTTPException(status_code=404, detail="No pending verification for this email.")
     
     # Check if OTP is expired
-    if is_otp_expired(verification['expires_at']):
-        delete_email_verification(email)
+    if is_otp_expired(verification.expires_at.isoformat()):
+        db.delete(verification)
+        db.commit()
         raise HTTPException(status_code=410, detail="OTP has expired. Please sign up again.")
     
     # Verify OTP
-    if verification['otp'] != otp:
+    if verification.otp != otp:
         raise HTTPException(status_code=401, detail="Incorrect OTP.")
     
     # OTP is valid, create user
     try:
-        user_id = create_user(email, verification['password_hash'])
-    except sqlite3.IntegrityError:
+        new_user = UserModel(
+            email=email,
+            password_hash=verification.password_hash,
+            login_count=0
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        user_id = new_user.id
+    except IntegrityError:
+        db.rollback()
         raise HTTPException(status_code=409, detail="Account already exists. Please log in.")
     
-    if not user_id:
-        raise HTTPException(status_code=500, detail="Failed to create user.")
-    
     # Delete verification record
-    delete_email_verification(email)
+    db.delete(verification)
+    db.commit()
     
     return {
         "message": "Email verified. Account created successfully.",
@@ -120,37 +162,91 @@ async def verify_otp(data: dict):
     }
 
 @router.post("/login")
-async def login(user: User):
+async def login(
+    request: Request,
+    user: UserLogin,
+    db: Session = Depends(get_db),
+    _rate_check: None = Depends(check_login_rate_limit),
+):
     """
-    Login user - Returns JWT access token
-    Validates email and password
+    Login user - Returns JWT access token.
+
+    Security measures:
+      - Rate limited per IP AND per email (dual-layer, with exponential backoff)
+      - Counters reset on successful login
+      - Constant-time response (≥200ms) to prevent timing attacks
+      - Generic error message for both "user not found" and "wrong password"
+        to prevent user enumeration
+      - Excessive failures logged for abuse detection
     """
+    start = time.monotonic()
+
+    # Generic error message — same for "no user" and "wrong password"
+    GENERIC_AUTH_ERROR = "Invalid email or password."
+
     # Get user from database
-    db_user = get_user_by_email(user.email)
+    db_user = db.query(UserModel).filter(UserModel.email == user.email).first()
     
     if not db_user:
-        raise HTTPException(status_code=404, detail="No account found. Please sign up.")
+        # User not found — but we still burn time mimicking bcrypt verify
+        # to prevent timing-based user enumeration.
+        # hash_password() internally calls bcrypt which takes ~100ms.
+        # We do a dummy verify instead of a full hash to be cheaper.
+        try:
+            verify_password("dummy_password", "$2b$12$LJ3m4ys3Gzl/000000000u0000000000000000000000000000000")
+        except Exception:
+            pass
+        await on_login_failure(request, user.email)
+        await constant_time_login(start)
+        raise HTTPException(status_code=401, detail=GENERIC_AUTH_ERROR)
     
-    stored_hash = db_user['password_hash']
+    stored_hash = db_user.password_hash
     if not stored_hash:
-        raise HTTPException(status_code=400, detail="Stored password hash is invalid.")
+        await on_login_failure(request, user.email)
+        await constant_time_login(start)
+        raise HTTPException(status_code=401, detail=GENERIC_AUTH_ERROR)
     
     try:
         if not verify_password(user.password, stored_hash):
-            raise HTTPException(status_code=401, detail="Incorrect password.")
+            await on_login_failure(request, user.email)
+            await constant_time_login(start)
+            raise HTTPException(status_code=401, detail=GENERIC_AUTH_ERROR)
     except UnknownHashError:
-        raise HTTPException(status_code=400, detail="Stored password hash is invalid.")
+        await on_login_failure(request, user.email)
+        await constant_time_login(start)
+        raise HTTPException(status_code=401, detail=GENERIC_AUTH_ERROR)
+    
+    # ── Success path ──
+    # Reset rate-limit counters so the user isn't penalized for earlier typos
+    await on_login_success(request, user.email)
+
+    # Update last login
+    db_user.last_login = datetime.utcnow()
+    db_user.login_count = (db_user.login_count or 0) + 1
+    db.commit()
     
     # Generate JWT token with user_id and email
-    # JWT spec requires 'sub' claim to be a STRING
     access_token = create_access_token(
-        data={"sub": str(db_user['id']), "email": db_user['email']}
+        data={"sub": str(db_user.id), "email": db_user.email}
     )
+    
+    # Log user activity (login)
+    log_user_activity(
+        user_id=db_user.id,
+        action_type="login",
+        activity_event={
+            "message": "User login",
+            "email": db_user.email
+        },
+        db=db
+    )
+
+    await constant_time_login(start)
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "email": db_user['email'],
+        "email": db_user.email,
         "message": "Login successful"
     }
 

@@ -1,13 +1,13 @@
 """
-Data loader script: Populate SQLite with Airbnb-style hotel data
+Data loader script: Populate PostgreSQL with Airbnb-style hotel data
 Run once after creating the database schema
 """
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from utils.database import create_hotel, init_database, get_db_connection
-import sqlite3
+from backend.config.database import SessionLocal
+from backend.models.models import Hotel
 
 def load_sample_data():
     """Load realistic Airbnb-style hotel data"""
@@ -251,36 +251,45 @@ def load_sample_data():
         h['image_url'] = f"/uploads/hotels/hotel{idx}.jpg"
         h['amenities'] = assign_amenities(h)
     
-    # Check if data already exists to avoid duplicates
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM hotels")
-    count = cursor.fetchone()[0]
-    conn.close()
+    # Create database session
+    db = SessionLocal()
     
-    if count > 0:
-        print(f"Database already contains {count} hotels. Skipping data load.")
-        return
+    try:
+        # Check if data already exists to avoid duplicates
+        count = db.query(Hotel).count()
+        
+        if count > 0:
+            print(f"Database already contains {count} hotels. Skipping data load.")
+            return
+        
+        # Insert hotels using ORM
+        for hotel_data in hotels:
+            hotel = Hotel(
+                name=hotel_data["name"],
+                city=hotel_data["city"],
+                country=hotel_data["country"],
+                latitude=hotel_data["latitude"],
+                longitude=hotel_data["longitude"],
+                price=hotel_data["price"],
+                room_type=hotel_data["room_type"],
+                rating=hotel_data["rating"],
+                guests=hotel_data.get("guests", 2),
+                description=hotel_data["description"],
+                image_url=hotel_data["image_url"],
+                amenities=hotel_data.get("amenities", [])  # Store as JSON array
+            )
+            db.add(hotel)
+        
+        # Commit all hotels
+        db.commit()
+        print(f"✓ Successfully loaded {len(hotels)} hotels into PostgreSQL database")
     
-    # Insert hotels
-    for hotel in hotels:
-        create_hotel(
-            name=hotel["name"],
-            city=hotel["city"],
-            country=hotel["country"],
-            latitude=hotel["latitude"],
-            longitude=hotel["longitude"],
-            price=hotel["price"],
-            room_type=hotel["room_type"],
-            rating=hotel["rating"],
-            guests=hotel.get("guests", 2),
-            description=hotel["description"],
-            image_url=hotel["image_url"],
-            amenities=hotel.get("amenities", [])
-        )
-    
-    print(f"✓ Successfully loaded {len(hotels)} hotels into database")
+    except Exception as e:
+        print(f"✗ Error loading hotels: {e}")
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 if __name__ == "__main__":
-    init_database()
     load_sample_data()
