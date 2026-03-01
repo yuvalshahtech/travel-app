@@ -5,8 +5,8 @@ Logs user behavior to the user_activity table for analytics
 import logging
 from typing import Optional
 from sqlalchemy.orm import Session
-from backend.models.models import UserActivity
-from backend.config.database import SessionLocal
+from models.models import UserActivity
+from config.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
