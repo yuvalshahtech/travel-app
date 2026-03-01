@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 import json
-from backend.models.models import Booking, Hotel, UserActivity
+from models.models import Booking, Hotel, UserActivity
 
 logger = logging.getLogger(__name__)
 
