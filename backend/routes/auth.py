@@ -6,15 +6,15 @@ from passlib.exc import UnknownHashError
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
-from backend.schemas.auth import UserLogin
-from backend.models.models import User as UserModel, EmailVerification  # SQLAlchemy ORM models
-from backend.config.database import get_db
-from backend.utils.auth import hash_password, verify_password
-from backend.utils.otp import generate_otp, get_otp_expiry, is_otp_expired
-from backend.utils.email import send_otp_email
-from backend.utils.jwt_auth import create_access_token
-from backend.utils.activity_logger import log_user_activity
-from backend.middleware.abuse_protection import (
+from schemas.auth import UserLogin
+from models.models import User as UserModel, EmailVerification  # SQLAlchemy ORM models
+from config.database import get_db
+from utils.auth import hash_password, verify_password
+from utils.otp import generate_otp, get_otp_expiry, is_otp_expired
+from utils.email import send_otp_email
+from utils.jwt_auth import create_access_token
+from utils.activity_logger import log_user_activity
+from middleware.abuse_protection import (
     check_login_rate_limit,
     check_signup_rate_limit,
     on_login_success,
