@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker, Session, declarative_base
 from sqlalchemy.pool import NullPool
 from contextlib import contextmanager
 import logging
-from backend.config.settings import settings
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
