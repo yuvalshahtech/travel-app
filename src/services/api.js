@@ -1,7 +1,7 @@
 // Frontend API service for Heavenly
 // Vanilla JavaScript fetch wrapper for backend endpoints
 
-const API_BASE = (typeof window !== 'undefined' && window.__API_BASE__) ? window.__API_BASE__ : 'http://localhost:8000';
+const API_BASE = (typeof window !== 'undefined' && window.__API_BASE__) ? window.__API_BASE__ : 'https://travel-app-96ld.onrender.com/';
 
 // Export API_BASE for use in other modules
 export { API_BASE };
