@@ -9,7 +9,7 @@
 
 const API_BASE = (typeof window !== 'undefined' && window.__API_BASE__)
     ? window.__API_BASE__
-    : 'http://localhost:8000';
+    : 'https://travel-app-96ld.onrender.com';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
