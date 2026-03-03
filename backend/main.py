@@ -40,13 +40,27 @@ if uploads_dir.exists():
     app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 # Configure CORS
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+raw_origins = os.getenv("CORS_ORIGINS")
+
+if raw_origins:
+    allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+elif ENVIRONMENT == "production":
+    allowed_origins = ["https://heavenly-travel.netlify.app"]
+else:
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+    ]
+
+logging.info(f"CORS allowed origins: {allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in CORS_ORIGINS],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Initialize database on startup
