@@ -90,14 +90,15 @@ class EventPriority(IntEnum):
 
 # Map event_type → priority
 EVENT_PRIORITY_MAP: Dict[str, EventPriority] = {
-    "session_start": EventPriority.CRITICAL,
-    "session_end":   EventPriority.CRITICAL,
-    "hotel_view":    EventPriority.CRITICAL,
-    "page_view":     EventPriority.MEDIUM,
-    "map_open":      EventPriority.MEDIUM,
-    "reviews_open":  EventPriority.MEDIUM,
-    "scroll_depth":  EventPriority.MEDIUM,
-    "heartbeat":     EventPriority.LOW,
+    "session_start":      EventPriority.CRITICAL,
+    "session_end":        EventPriority.CRITICAL,
+    "session_checkpoint": EventPriority.CRITICAL,  # NEW: Sparse checkpoints are critical
+    "hotel_view":         EventPriority.CRITICAL,
+    "page_view":          EventPriority.MEDIUM,
+    "map_open":           EventPriority.MEDIUM,
+    "reviews_open":       EventPriority.MEDIUM,
+    "scroll_depth":       EventPriority.MEDIUM,
+    "heartbeat":          EventPriority.LOW,  # Legacy (deprecated)
 }
 
 

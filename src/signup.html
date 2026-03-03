@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up</title>
-    <link rel="icon" href="http://localhost:8000/uploads/logo/heavenly_logo_png.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='50' font-size='90' fill='%23FF6B6B'>H</text></svg>">
     <style>
         :root {
             --bg: #ffffff;
@@ -365,7 +365,7 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:8000';
+        const API_URL = window.__API_BASE__ || 'https://travel-app-96ld.onrender.com';
         const signupForm = document.getElementById('signupForm');
         const otpForm = document.getElementById('otpForm');
         const messageDiv = document.getElementById('message');

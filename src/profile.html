@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - Heavenly</title>
-    <link rel="icon" href="http://localhost:8000/uploads/logo/heavenly_logo_png.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='50' font-size='90' fill='%23FF6B6B'>H</text></svg>">
     <style>
         :root {
             --brand-red: #d90429;
@@ -501,7 +501,7 @@
 <body>
     <header>
         <div class="header-content">
-            <a href="home.html" class="logo"><img src="http://localhost:8000/uploads/logo/heavenly_logo_png.png" alt="Heavenly logo"> Heavenly</a>
+            <a href="home.html" class="logo"><img id="headerLogo" src="" alt="Heavenly logo"> Heavenly</a>
             <div class="header-actions">
                 <button onclick="window.location.href='home.html'">Home</button>
                 <button id="headerBecomeHostBtn" aria-label="Become a Host - Coming Soon">Become a Host</button>
@@ -552,7 +552,6 @@
             <h2 class="section-title">Booking History</h2>
             <div id="bookingsContent">
                 <div class="loading">
-                    <img src="http://localhost:8000/uploads/logo/heavenly_logo_png.png" alt="Heavenly logo" class="loading-logo">
                     <div>Loading your bookings...</div>
                 </div>
             </div>

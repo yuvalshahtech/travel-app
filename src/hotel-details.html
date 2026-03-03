@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hotel Details - Heavenly</title>
-    <link rel="icon" href="http://localhost:8000/uploads/logo/heavenly_logo_png.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='50' font-size='90' fill='%23FF6B6B'>H</text></svg>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
@@ -1276,7 +1276,7 @@
 <body>
     <header>
         <div class="header-content">
-            <a href="home.html" class="logo"><img src="http://localhost:8000/uploads/logo/heavenly_logo_png.png" alt="Heavenly logo"> Heavenly</a>
+            <a href="home.html" class="logo">Heavenly</a>
             <button class="header-btn" onclick="window.location.href='profile.html'" aria-label="View your profile">My Profile</button>
             <button class="header-btn" id="headerBecomeHostBtn" aria-label="Become a Host - Coming Soon">Become a Host</button>
             <button class="header-btn" onclick="logout()" aria-label="Logout">Logout</button>
@@ -1315,7 +1315,6 @@
         </button>
 
         <div id="detailsLoading" class="loading">
-            <img src="http://localhost:8000/uploads/logo/heavenly_logo_png.png" alt="Heavenly logo" class="loading-logo">
             <div>Loading hotel details…</div>
         </div>
         <div id="detailsError" class="error" style="display: none;">Unable to load hotel details.</div>
@@ -1384,23 +1383,17 @@
         (function(){
             const origin = window.location.origin || '';
             if (!window.__API_BASE__) {
-                // If frontend is on port 3000, explicitly use backend on port 8000
-                if (origin.includes(':3000')) {
-                    window.__API_BASE__ = 'http://localhost:8000';
-                } else if (origin.includes(':8000')) {
-                    // If on port 8000, same origin (assuming backend serves on same port)
+                // Production: use Render backend
+                if (origin.includes(':3000') || origin.includes(':8000')) {
                     window.__API_BASE__ = '';
                 } else {
-                    // Default to backend on port 8000
-                    window.__API_BASE__ = 'http://localhost:8000';
+                    window.__API_BASE__ = 'https://travel-app-96ld.onrender.com';
                 }
             }
         })();
     </script>
     <script type="module">
         import { getHotelById, checkHotelAvailability, createBooking } from './services/api.js';
-        import { initTracker, startHotelViewTracking, trackMapOpen, trackReviewsOpen } from './services/tracker.js';
-        initTracker('hotel_details');
 
         // Initialize header "Become a Host" button handler
         // This runs independently of the hotel booking flow
@@ -1430,18 +1423,6 @@
         let currentFilter = 'all';
         let blockedDateRanges = []; // Store unavailable date ranges from backend
         let calendarInstance = null; // Store calendar instance to refresh after blocked dates are fetched
-
-        // Calculate total payable price for 1 night (includes all fees & taxes)
-        function calculateTotalPayable(basePrice) {
-            const roomCharges = basePrice * 1;
-            const cleaningFee = 500;
-            const subtotal = roomCharges + cleaningFee;
-            const platformFee = subtotal * 0.10;
-            const subtotalBeforeGST = subtotal + platformFee;
-            const gst = subtotalBeforeGST * 0.18;
-            const total = subtotal + platformFee + gst;
-            return Math.round(total);
-        }
 
         const amenityIcons = {
             'Wi-Fi': `<svg class="amenity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M12 20h.01"/></svg>`,
@@ -1550,8 +1531,7 @@
             document.getElementById('reviewCount').textContent = `${hotel.reviews.length} reviews`;
             document.getElementById('roomType').textContent = hotel.room_type || 'Room';
 
-            const totalPayable = calculateTotalPayable(hotel.price);
-            const priceText = `₹${totalPayable.toLocaleString('en-IN')} `;
+            const priceText = `₹${Math.round(hotel.price).toLocaleString('en-IN')} `;
             document.getElementById('priceRow').innerHTML = `${priceText}<span>/ night</span>`;
 
             document.getElementById('infoRoomType').textContent = hotel.room_type || 'Room';
@@ -1567,37 +1547,6 @@
             renderReviews();
             renderMap(hotel.latitude, hotel.longitude, hotel.name);
             renderReservationBox(hotel);
-
-            // ── Engagement Tracking ──
-            startHotelViewTracking(hotel.id);
-
-            // Track map section visibility via IntersectionObserver
-            const mapSection = document.querySelector('.hotel-map-section');
-            if (mapSection) {
-                let mapTracked = false;
-                const mapObs = new IntersectionObserver((entries) => {
-                    if (!mapTracked && entries[0].isIntersecting) {
-                        mapTracked = true;
-                        trackMapOpen(hotel.id);
-                        mapObs.disconnect();
-                    }
-                }, { threshold: 0.3 });
-                mapObs.observe(mapSection);
-            }
-
-            // Track reviews section visibility
-            const reviewsSection = document.getElementById('reviewsList');
-            if (reviewsSection) {
-                let reviewsTracked = false;
-                const revObs = new IntersectionObserver((entries) => {
-                    if (!reviewsTracked && entries[0].isIntersecting) {
-                        reviewsTracked = true;
-                        trackReviewsOpen(hotel.id);
-                        revObs.disconnect();
-                    }
-                }, { threshold: 0.3 });
-                revObs.observe(reviewsSection);
-            }
         }
 
         function formatDateLabel(date) {
@@ -1921,8 +1870,7 @@
 
             const priceRow = document.createElement('div');
             priceRow.className = 'price-row';
-            const totalPayable = calculateTotalPayable(hotel.price);
-            priceRow.innerHTML = `₹${totalPayable.toLocaleString('en-IN')} <span>/ night</span>`;
+            priceRow.innerHTML = `₹${Math.round(hotel.price).toLocaleString('en-IN')} <span>/ night</span>`;
 
             const dateField = document.createElement('div');
             dateField.className = 'reservation-field';
@@ -2192,12 +2140,12 @@
                     actionBtn.disabled = false;
                     messageEl.className = 'availability-message success';
                     
-                    // Calculate and show TOTAL PAYABLE price (no base price outside E-Bill)
+                    // Calculate and show price
                     const nights = Math.max(1, Math.round((selectedEnd - selectedStart) / (1000 * 60 * 60 * 24)));
-                    const breakdown = calculateBreakdown(hotel.price, nights);
+                    const total = nights * hotel.price;
                     priceSummary.innerHTML = `
-                        <div><strong>Total for ${nights} night${nights > 1 ? 's' : ''}:</strong> ₹${breakdown.total.toLocaleString('en-IN')}</div>
-                        <div style="margin-top:4px;font-size:12px;color:#666;">Includes all fees & taxes</div>
+                        <div><strong>${nights} nights</strong> × ₹${Math.round(hotel.price).toLocaleString('en-IN')} per night</div>
+                        <div style="margin-top:6px;"><strong>Total:</strong> ₹${Math.round(total).toLocaleString('en-IN')}</div>
                     `;
                     priceSummary.style.display = 'block';
                     messageEl.textContent = 'Ready to book!';

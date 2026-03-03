@@ -11,12 +11,13 @@ import json
 ALLOWED_EVENT_TYPES = {
     "session_start",
     "session_end",
+    "session_checkpoint",  # NEW: Sparse cumulative checkpoint (every ~90s)
     "page_view",
     "hotel_view",
     "map_open",
     "reviews_open",
     "scroll_depth",
-    "heartbeat",
+    "heartbeat",  # Legacy (deprecated, but keeping for backward compat)
 }
 
 MAX_METADATA_BYTES = 2048  # 2 KB limit

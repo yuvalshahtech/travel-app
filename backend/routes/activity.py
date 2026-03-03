@@ -14,11 +14,46 @@ Architecture:
   The GET /analytics/user/{user_id} endpoint still reads directly from
   the database — read queries are unaffected by this change.
 
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  CHECKPOINT MODEL (Production-Safe)                          ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  The frontend now sends SPARSE CHECKPOINTS (~90s intervals) instead of       ║
+║  high-frequency heartbeats (15s). This eliminates 429 rate limit errors      ║
+║  while preserving accurate engagement time tracking.                         ║
+║                                                                              ║
+║  Event Types:                                                                ║
+║    • session_start        → Sent once per page load                          ║
+║    • session_checkpoint   → Sent every ~90±15s (NEW, cumulative)             ║
+║    • session_end          → Sent on unload/visibility hidden (beacon)        ║
+║                                                                              ║
+║  Checkpoint Payload:                                                         ║
+║    {                                                                         ║
+║      "event_type": "session_checkpoint",                                     ║
+║      "duration_seconds": 450,  // CUMULATIVE active time (not delta)         ║
+║      "metadata": {                                                           ║
+║        "map_open_count": 3,                                                  ║
+║        "reviews_open_count": 2,                                              ║
+║        "max_scroll_depth": 85,                                               ║
+║        "hotel_active_seconds": 120  // if on hotel_details page             ║
+║      }                                                                       ║
+║    }                                                                         ║
+║                                                                              ║
+║  Benefits:                                                                   ║
+║    ✓ No 429 errors (max ~8 requests per session vs. ~200 with heartbeat)    ║
+║    ✓ Accurate active engagement time (not wall-clock time)                  ║
+║    ✓ Survives disconnections (last checkpoint persisted)                    ║
+║    ✓ No 24-hour anomaly sessions (cumulative duration enforced)             ║
+║    ✓ Interaction counts accumulated locally (not separate POST calls)       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
 Rate limiting:
   - Max 1 event per second per session_id (burst protection)
   - Max 60 events per minute per session_id (sustained protection)
   - 2KB metadata limit (schema-level)
   - Event type allow-list (schema-level)
+  
+  With checkpoint model, typical sessions send ~6-8 events total:
+    1 session_start + ~4-6 checkpoints + 1 session_end = 6-8 events
 """
 import logging
 from typing import Optional

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search Results - Heavenly</title>
-    <link rel="icon" href="http://localhost:8000/uploads/logo/heavenly_logo_png.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='50' font-size='90' fill='%23FF6B6B'>H</text></svg>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
@@ -953,7 +953,7 @@
 <body>
     <header>
         <div class="header-content">
-            <a href="home.html" class="logo"><img src="http://localhost:8000/uploads/logo/heavenly_logo_png.png" alt="Heavenly logo"> Heavenly</a>
+            <a href="home.html" class="logo">Heavenly</a>
             <input type="text" id="searchInput" class="search-bar" placeholder="Search hotels..." />
             <div class="user-menu">
                 <button onclick="performSearch()" aria-label="Search hotels">Search</button>
@@ -1028,11 +1028,11 @@
                 </div>
                 <div class="filter-section-content" id="priceContent">
                     <div class="filter-input-group">
-                        <label>Minimum Price (₹) - Total per night</label>
-                        <input type="number" id="minPriceInput" placeholder="e.g., 5000" min="0" />
+                        <label>Minimum Price (₹)</label>
+                        <input type="number" id="minPriceInput" placeholder="e.g., 2000" min="0" />
                         
-                        <label>Maximum Price (₹) - Total per night</label>
-                        <input type="number" id="maxPriceInput" placeholder="e.g., 15000" min="0" />
+                        <label>Maximum Price (₹)</label>
+                        <input type="number" id="maxPriceInput" placeholder="e.g., 7000" min="0" />
                     </div>
                 </div>
             </div>
@@ -1160,7 +1160,7 @@
                 if (origin.includes(':3000') || origin.includes(':8000')) {
                     window.__API_BASE__ = '';
                 } else {
-                    window.__API_BASE__ = 'http://localhost:8000';
+                    window.__API_BASE__ = 'https://travel-app-96ld.onrender.com';
                 }
             }
         })();
@@ -1168,33 +1168,10 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module">
         import { searchHotels, searchHotelsWithFilters } from './services/api.js';
-        import { initTracker } from './services/tracker.js';
-        initTracker('search');
-
-        // Calculate total payable price for 1 night (includes all fees & taxes)
-        function calculateTotalPayable(basePrice) {
-            const roomCharges = basePrice * 1;
-            const cleaningFee = 500;
-            const subtotal = roomCharges + cleaningFee;
-            const platformFee = subtotal * 0.10;
-            const subtotalBeforeGST = subtotal + platformFee;
-            const gst = subtotalBeforeGST * 0.18;
-            const total = subtotal + platformFee + gst;
-            return Math.round(total);
-        }
-
-        // Reverse calculation: convert total payable price back to base price
-        // Used for backend filtering (backend filters by base price)
-        function calculateBasePrice(totalPayable) {
-            // Formula: total = (base + 500) × 1.10 × 1.18
-            // Reverse: base = (total / 1.298) - 500
-            return Math.round((totalPayable / 1.298) - 500);
-        }
 
         // Helper function to generate branded loading HTML
         function createLoadingHTML(message = 'Loading...') {
             return `<div class="loading">
-                <img src="http://localhost:8000/uploads/logo/heavenly_logo_png.png" alt="Heavenly logo" class="loading-logo">
                 <div>${message}</div>
             </div>`;
         }
@@ -1438,13 +1415,9 @@
                 return;
             }
 
-            // Read all filter values - prices entered by user are TOTAL prices
-            const minPriceTotal = parseFloat(document.getElementById('minPriceInput').value);
-            const maxPriceTotal = parseFloat(document.getElementById('maxPriceInput').value);
-            // Convert total prices to base prices for backend filtering
-            const minPrice = minPriceTotal ? calculateBasePrice(minPriceTotal) : null;
-            const maxPrice = maxPriceTotal ? calculateBasePrice(maxPriceTotal) : null;
-            
+            // Read all filter values
+            const minPrice = parseFloat(document.getElementById('minPriceInput').value);
+            const maxPrice = parseFloat(document.getElementById('maxPriceInput').value);
             const guests = parseInt(document.getElementById('guestsInput').value);
             let minRating = parseFloat(document.getElementById('minRatingInput').value);
             
@@ -1926,7 +1899,7 @@
                     <div class="list-hotel-name">${hotel.name}</div>
                     <div class="list-hotel-location">${hotel.city}, ${hotel.country}</div>
                     <div class="list-hotel-footer">
-                        <div class="list-hotel-price">₹${calculateTotalPayable(hotel.price).toLocaleString('en-IN')}</div>
+                        <div class="list-hotel-price">₹${(Math.round(hotel.price)).toLocaleString('en-IN')}</div>
                         <div class="list-hotel-rating">
                             <span class="star">★</span>
                             <span>${(() => { const cr = clampRating(hotel.rating); return cr !== null ? cr.toFixed(2) : 'N/A'; })()}</span>
@@ -1937,7 +1910,7 @@
         }
 
         function buildPopupContent(hotel) {
-            const price = `₹${calculateTotalPayable(hotel.price).toLocaleString('en-IN')}`;
+            const price = `₹${(Math.round(hotel.price)).toLocaleString('en-IN')}`;
             const clampedRating = clampRating(hotel.rating);
             const rating = clampedRating !== null ? clampedRating.toFixed(2) : 'N/A';
             const location = [hotel.city, hotel.country].filter(Boolean).join(', ');
