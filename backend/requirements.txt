@@ -1,28 +1,26 @@
-# Core Framework
+# Core
 fastapi==0.108.0
 uvicorn[standard]==0.27.0
-
-# Data Validation
 pydantic[email]==2.5.0
 
 # Database
-alembic==1.13.0
-psycopg2-binary==2.9.9
 sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.13.0
 
-# Authentication & Security
-passlib[bcrypt]==1.7.4
+# Authentication
 python-jose[cryptography]==3.3.0
+passlib==1.7.4
 argon2-cffi==23.1.0
 
-# Email Service
+# Email
 sib-api-v3-sdk==7.6.0
 
-# Configuration & Logging
+# Config & Logging
 python-dotenv==1.0.0
 python-json-logger==2.0.7
 
 # Testing
-httpx==0.26.0
 pytest==8.0.0
 pytest-asyncio==0.23.3
+httpx==0.26.0

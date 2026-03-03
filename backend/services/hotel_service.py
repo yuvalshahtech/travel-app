@@ -99,9 +99,14 @@ class HotelService:
             if guests is not None:
                 query = query.filter(Hotel.guests >= guests)
             
-            # Property type filter
+            # Property type filter (partial match for flexible frontend values)
+            # Frontend sends simplified values like "Villa", "Apartment", "Room"
+            # DB stores descriptive values like "Entire villa", "Private room"
             if property_types:
-                query = query.filter(Hotel.room_type.in_(property_types))
+                property_conditions = [
+                    Hotel.room_type.ilike(f"%{ptype}%") for ptype in property_types
+                ]
+                query = query.filter(or_(*property_conditions))
             
             # Amenities filter (JSON array contains)
             if amenities:

@@ -1,22 +1,23 @@
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.so
 *.egg
 *.egg-info/
 dist/
 build/
 
-# Virtual Environments
+# Virtual Environment
 venv/
+.venv/
 env/
 ENV/
-.venv/
 
 # Environment Variables
 .env
 .env.local
-.env.*.local
+.env.*
 
 # Testing
 .pytest_cache/
@@ -24,7 +25,10 @@ ENV/
 htmlcov/
 .tox/
 .hypothesis/
+
+# Type Checking
 .mypy_cache/
+.pytype/
 
 # Database
 *.db
@@ -35,20 +39,25 @@ htmlcov/
 logs/
 *.log
 
-# IDEs
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
 Thumbs.db
+Desktop.ini
 
-# Application Specific
-backend/uploads/hotels/
+# Application
 backend/logs/
+backend/uploads/hotels/*.jpg
+backend/uploads/hotels/*.png
+backend/uploads/hotels/*.jpeg
+backend/uploads/hotels/*.webp
 
-# Temporary Files
+# Temporary
 *.tmp
 *.bak
-*.old
