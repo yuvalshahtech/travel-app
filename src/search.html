@@ -1168,6 +1168,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module">
         import { searchHotels, searchHotelsWithFilters } from './services/api.js';
+        import { calculateDisplayPrice, formatCurrency } from './services/pricing.js';
 
         // Helper function to generate branded loading HTML
         function createLoadingHTML(message = 'Loading...') {
@@ -1899,7 +1900,7 @@
                     <div class="list-hotel-name">${hotel.name}</div>
                     <div class="list-hotel-location">${hotel.city}, ${hotel.country}</div>
                     <div class="list-hotel-footer">
-                        <div class="list-hotel-price">₹${(Math.round(hotel.price)).toLocaleString('en-IN')}</div>
+                        <div class="list-hotel-price">${formatCurrency(calculateDisplayPrice(hotel.price))}</div>
                         <div class="list-hotel-rating">
                             <span class="star">★</span>
                             <span>${(() => { const cr = clampRating(hotel.rating); return cr !== null ? cr.toFixed(2) : 'N/A'; })()}</span>
@@ -1910,7 +1911,7 @@
         }
 
         function buildPopupContent(hotel) {
-            const price = `₹${(Math.round(hotel.price)).toLocaleString('en-IN')}`;
+            const price = formatCurrency(calculateDisplayPrice(hotel.price));
             const clampedRating = clampRating(hotel.rating);
             const rating = clampedRating !== null ? clampedRating.toFixed(2) : 'N/A';
             const location = [hotel.city, hotel.country].filter(Boolean).join(', ');

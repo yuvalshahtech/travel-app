@@ -546,6 +546,7 @@
     </script>
     <script type="module">
         import { getRecentHotels, getHotelsByCity } from './services/api.js';
+        import { calculateDisplayPrice, formatCurrency } from './services/pricing.js';
 
         // Helper function to generate branded loading HTML
         function createLoadingHTML(message = 'Loading...') {
@@ -661,7 +662,7 @@
                         <div class="hotel-footer">
                             <div>
                                 <span class="hotel-price-label">per night</span>
-                                <span class="hotel-price">₹${(Math.round(hotel.price)).toLocaleString('en-IN')}</span>
+                                <span class="hotel-price">${formatCurrency(calculateDisplayPrice(hotel.price))}</span>
                             </div>
                             <div class="hotel-rating">
                                 <span class="star">★</span>

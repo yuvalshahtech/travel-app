@@ -561,31 +561,8 @@
     <script type="module">
         import { API_BASE } from './services/api.js';
         import { initTracker } from './services/tracker.js';
+        import { calculateBreakdown, formatCurrency } from './services/pricing.js';
         initTracker('profile');
-
-        // Calculate total payable price for 1 night (includes all fees & taxes)
-        function calculateTotalPayable(basePrice) {
-            const roomCharges = basePrice * 1;
-            const cleaningFee = 500;
-            const subtotal = roomCharges + cleaningFee;
-            const platformFee = subtotal * 0.10;
-            const subtotalBeforeGST = subtotal + platformFee;
-            const gst = subtotalBeforeGST * 0.18;
-            const total = subtotal + platformFee + gst;
-            return Math.round(total);
-        }
-
-        // Calculate total payable price for multiple nights (includes all fees & taxes)
-        function calculateTotalPayableForBooking(basePrice, nights) {
-            const roomCharges = basePrice * nights;
-            const cleaningFee = 500;
-            const subtotal = roomCharges + cleaningFee;
-            const platformFee = subtotal * 0.10;
-            const subtotalBeforeGST = subtotal + platformFee;
-            const gst = subtotalBeforeGST * 0.18;
-            const total = subtotal + platformFee + gst;
-            return Math.round(total);
-        }
 
         // Initialize header "Become a Host" button handler
         function initializeHeaderBecomeHostButton() {
@@ -913,8 +890,8 @@
                                 <span class="booking-detail-label">Total Payable</span>
                                 <span class="booking-detail-value">₹${(() => {
                                     const basePrice = nights > 0 ? Math.round(booking.total_price / nights) : booking.total_price;
-                                    const totalPayable = calculateTotalPayableForBooking(basePrice, nights);
-                                    return totalPayable.toLocaleString('en-IN');
+                                    const breakdown = calculateBreakdown(basePrice, nights);
+                                    return breakdown.total.toLocaleString('en-IN');
                                 })()}</span>
                             </div>
                         </div>

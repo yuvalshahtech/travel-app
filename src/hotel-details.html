@@ -1394,6 +1394,7 @@
     </script>
     <script type="module">
         import { getHotelById, checkHotelAvailability, createBooking } from './services/api.js';
+        import { calculateBreakdown, formatCurrency } from './services/pricing.js';
 
         // Initialize header "Become a Host" button handler
         // This runs independently of the hotel booking flow
@@ -1531,7 +1532,7 @@
             document.getElementById('reviewCount').textContent = `${hotel.reviews.length} reviews`;
             document.getElementById('roomType').textContent = hotel.room_type || 'Room';
 
-            const priceText = `₹${Math.round(hotel.price).toLocaleString('en-IN')} `;
+            const priceText = formatCurrency(calculateBreakdown(hotel.price, 1).total);
             document.getElementById('priceRow').innerHTML = `${priceText}<span>/ night</span>`;
 
             document.getElementById('infoRoomType').textContent = hotel.room_type || 'Room';
@@ -1870,7 +1871,7 @@
 
             const priceRow = document.createElement('div');
             priceRow.className = 'price-row';
-            priceRow.innerHTML = `₹${Math.round(hotel.price).toLocaleString('en-IN')} <span>/ night</span>`;
+            priceRow.innerHTML = `${formatCurrency(calculateBreakdown(hotel.price, 1).total)} <span>/ night</span>`;
 
             const dateField = document.createElement('div');
             dateField.className = 'reservation-field';
@@ -2067,31 +2068,11 @@
             container.appendChild(eBillModalOverlay);
             
             // ==================== E-BILL PRICE CALCULATION ====================
-            function formatCurrency(amount) {
-                return '₹' + Math.round(amount).toLocaleString('en-IN');
-            }
+            // formatCurrency and calculateBreakdown imported from pricing.js
 
             function formatDate(date) {
                 const options = { year: 'numeric', month: 'short', day: 'numeric' };
                 return date.toLocaleDateString('en-IN', options);
-            }
-
-            function calculateBreakdown(pricePerNight, nights) {
-                const roomCharges = pricePerNight * nights;
-                const cleaningFee = 500; // Fixed cleaning fee
-                const subtotal = roomCharges + cleaningFee;
-                const platformFee = subtotal * 0.10; // 10% platform service fee
-                const subtotalBeforeGST = subtotal + platformFee;
-                const gst = subtotalBeforeGST * 0.18; // 18% GST
-                const total = subtotal + platformFee + gst;
-
-                return {
-                    roomCharges: Math.round(roomCharges),
-                    cleaningFee: Math.round(cleaningFee),
-                    platformFee: Math.round(platformFee),
-                    gst: Math.round(gst),
-                    total: Math.round(total)
-                };
             }
 
             function showEBill() {
@@ -2140,12 +2121,12 @@
                     actionBtn.disabled = false;
                     messageEl.className = 'availability-message success';
                     
-                    // Calculate and show price
+                    // Calculate and show price using shared pricing module
                     const nights = Math.max(1, Math.round((selectedEnd - selectedStart) / (1000 * 60 * 60 * 24)));
-                    const total = nights * hotel.price;
+                    const breakdown = calculateBreakdown(hotel.price, nights);
                     priceSummary.innerHTML = `
-                        <div><strong>${nights} nights</strong> × ₹${Math.round(hotel.price).toLocaleString('en-IN')} per night</div>
-                        <div style="margin-top:6px;"><strong>Total:</strong> ₹${Math.round(total).toLocaleString('en-IN')}</div>
+                        <div><strong>${nights} nights</strong> × ${formatCurrency(hotel.price)} base rate</div>
+                        <div style="margin-top:6px;"><strong>Total (incl. fees & taxes):</strong> ${formatCurrency(breakdown.total)}</div>
                     `;
                     priceSummary.style.display = 'block';
                     messageEl.textContent = 'Ready to book!';
