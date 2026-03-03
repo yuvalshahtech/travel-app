@@ -564,6 +564,12 @@
         import { calculateBreakdown, formatCurrency } from './services/pricing.js';
         initTracker('profile');
 
+        // Set logo source using backend URL
+        const logoImg = document.getElementById('headerLogo');
+        if (logoImg) {
+            logoImg.src = API_BASE + '/uploads/logo/heavenly_logo_png.png';
+        }
+
         // Initialize header "Become a Host" button handler
         function initializeHeaderBecomeHostButton() {
             const headerBtn = document.getElementById('headerBecomeHostBtn');

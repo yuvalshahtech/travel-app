@@ -542,6 +542,11 @@
                     window.__API_BASE__ = 'https://travel-app-96ld.onrender.com';
                 }
             }
+            // Set logo sources after API_BASE is configured
+            const logoPath = window.__API_BASE__ + '/uploads/logo/heavenly_logo_png.png';
+            document.querySelectorAll('#headerLogo, [id^="loadingLogo"]').forEach(img => {
+                img.src = logoPath;
+            });
         })();
     </script>
     <script type="module">
@@ -549,9 +554,10 @@
         import { calculateDisplayPrice, formatCurrency } from './services/pricing.js';
 
         // Helper function to generate branded loading HTML
+        const logoUrl = (window.__API_BASE__ || 'https://travel-app-96ld.onrender.com') + '/uploads/logo/heavenly_logo_png.png';
         function createLoadingHTML(message = 'Loading...') {
             return `<div class="loading">
-                <img id="loadingLogoDynamic" src="" alt="Heavenly logo" class="loading-logo">
+                <img src="${logoUrl}" alt="Heavenly logo" class="loading-logo">
                 <div>${message}</div>
             </div>`;
         }
