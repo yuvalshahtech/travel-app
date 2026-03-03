@@ -40,32 +40,34 @@ async def signup(
     Does NOT create user in users table yet
 
     Rate limited: max 3 signups per IP per hour (configurable).
-    Returns identical response shape for "already exists" and "OTP sent"
-    to prevent user enumeration.
+    Returns HTTP 409 if email already registered to prevent duplicate signups.
     """
     
-    # Case 1: Account already fully created
-    # NOTE: We do NOT reveal that the account exists to prevent enumeration.
-    # The response shape is the same as the success case.
+    # Case 1: Account already fully created - return 409 Conflict
     existing_user = db.query(UserModel).filter(UserModel.email == user.email).first()
     if existing_user:
-        # Return same shape as success — the user will discover the conflict
-        # when they try to verify OTP (or they can try logging in).
         logger.info(f"Signup attempt for existing account: {user.email}")
-        return {
-            "message": "If this email is not already registered, you will receive an OTP shortly.",
-            "email": user.email
-        }
+        return JSONResponse(
+            status_code=409,
+            content={
+                "status": "exists",
+                "detail": "Account already exists",
+                "message": "Email already registered. Please login."
+            }
+        )
 
-    # Case 2: OTP already pending
+    # Case 2: OTP already pending - return 409 with different message
     existing_verification = db.query(EmailVerification).filter(EmailVerification.email == user.email).first()
     if existing_verification:
-        # Same generic response — prevents enumeration of pending signups
         logger.info(f"Signup attempt with pending OTP: {user.email}")
-        return {
-            "message": "If this email is not already registered, you will receive an OTP shortly.",
-            "email": user.email
-        }
+        return JSONResponse(
+            status_code=409,
+            content={
+                "status": "pending",
+                "detail": "OTP already sent",
+                "message": "OTP already sent to this email. Please check your inbox."
+            }
+        )
 
     # Hash the password (truncated to 72 bytes internally)
     password_hash = hash_password(user.password)

@@ -1169,12 +1169,26 @@
     <script type="module">
         import { searchHotels, searchHotelsWithFilters } from './services/api.js';
         import { calculateDisplayPrice, formatCurrency } from './services/pricing.js';
+        import { createLoadingHTML, injectLoadingStyles } from './services/loading.js';
+        import { initMobileNav, injectMobileNavStyles } from './services/mobile-nav.js';
+        import { initMobileSheet, injectMobileSheetStyles } from './services/mobile-sheet.js';
 
-        // Helper function to generate branded loading HTML
-        function createLoadingHTML(message = 'Loading...') {
-            return `<div class="loading">
-                <div>${message}</div>
-            </div>`;
+        // Inject loading styles
+        injectLoadingStyles();
+
+        // Inject mobile nav styles and initialize
+        injectMobileNavStyles();
+        initMobileNav();
+
+        // Inject mobile sheet styles and initialize
+        injectMobileSheetStyles();
+        // Initialize after DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                initMobileSheet({ sheetSelector: '.list-container', mapSelector: '#map' });
+            });
+        } else {
+            initMobileSheet({ sheetSelector: '.list-container', mapSelector: '#map' });
         }
 
         // Initialize header "Become a Host" button handler
@@ -1467,7 +1481,7 @@
 
             // Indicate loading state
             document.getElementById('hotelCount').textContent = hasActiveFilter ? 'Filtering…' : 'Loading…';
-            document.getElementById('hotelList').innerHTML = createLoadingHTML('Loading results...');
+            document.getElementById('hotelList').innerHTML = createLoadingHTML('Finding heavenly stays...');
 
             // Abort previous in-flight request
             if (searchAbortController) {
@@ -1502,7 +1516,7 @@
             } catch (error) {
                 if (error?.name === 'AbortError') return;
                 console.error('Error applying filters:', error);
-                document.getElementById('hotelList').innerHTML = createLoadingHTML('Error loading results');
+                document.getElementById('hotelList').innerHTML = createLoadingHTML('Unable to load results');
                 document.getElementById('hotelCount').textContent = '0 hotels';
             }
         }
@@ -1697,7 +1711,7 @@
 
             // Indicate loading state
             document.getElementById('hotelCount').textContent = 'Loading…';
-            document.getElementById('hotelList').innerHTML = createLoadingHTML('Loading results...');
+            document.getElementById('hotelList').innerHTML = createLoadingHTML('Searching for your perfect stay...');
 
             // Abort previous in-flight request
             if (searchAbortController) {
@@ -1712,7 +1726,7 @@
             } catch (error) {
                 if (error?.name === 'AbortError') return; // ignore aborted
                 console.error('Error searching hotels:', error);
-                document.getElementById('hotelList').innerHTML = createLoadingHTML('Error loading results');
+                document.getElementById('hotelList').innerHTML = createLoadingHTML('Unable to load results');
                 document.getElementById('hotelCount').textContent = '0 hotels';
             }
         }
@@ -1889,7 +1903,10 @@
 
             // Handle empty results - clear list and map, but count is already shown above
             if (count === 0) {
-                document.getElementById('hotelList').innerHTML = createLoadingHTML('No hotels found');
+                document.getElementById('hotelList').innerHTML = `
+                    <div class="heavenly-loading" style="min-height: 150px;">
+                        <p class="heavenly-loading__message">No hotels found matching your search</p>
+                    </div>`;
                 // Count is already displayed - do NOT hide it
                 return;
             }

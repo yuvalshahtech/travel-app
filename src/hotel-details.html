@@ -1115,6 +1115,110 @@
             }
         }
 
+        /* ============================================
+           MOBILE STICKY BOOKING BAR (max-width: 768px)
+           ============================================ */
+        .mobile-booking-bar {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            padding: 12px 16px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+            z-index: 1000;
+            border-top: 1px solid #eee;
+        }
+
+        .mobile-booking-bar__content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .mobile-booking-bar__price {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mobile-booking-bar__amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: #222;
+        }
+
+        .mobile-booking-bar__label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .mobile-booking-bar__btn {
+            background: linear-gradient(135deg, #FF5A5F 0%, #E74C52 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .mobile-booking-bar__btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 90, 95, 0.4);
+        }
+
+        .mobile-booking-bar__btn:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .mobile-booking-bar {
+                display: block;
+            }
+
+            /* Add padding to body for sticky bar */
+            body {
+                padding-bottom: 80px;
+            }
+
+            /* Hide original booking card on mobile */
+            .booking-card {
+                display: none !important;
+            }
+
+            /* Reduce spacing on mobile */
+            .container {
+                padding: 12px;
+            }
+
+            .section-card {
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+
+            .hotel-title {
+                font-size: 20px;
+            }
+
+            .cover-image {
+                height: 220px;
+            }
+
+            /* Header adjustments */
+            header {
+                padding: 12px 0;
+            }
+
+            .header-content {
+                padding: 0 12px;
+            }
+        }
+
         /* Logout Confirmation Modal */
         .logout-modal-overlay {
             display: none;
@@ -1274,6 +1378,17 @@
     </style>
 </head>
 <body>
+    <!-- Mobile Sticky Booking Bar -->
+    <div class="mobile-booking-bar" id="mobileBookingBar">
+        <div class="mobile-booking-bar__content">
+            <div class="mobile-booking-bar__price">
+                <span class="mobile-booking-bar__amount" id="mobileBarPrice">₹0</span>
+                <span class="mobile-booking-bar__label">per night + fees</span>
+            </div>
+            <button class="mobile-booking-bar__btn" id="mobileBookBtn">Reserve</button>
+        </div>
+    </div>
+
     <header>
         <div class="header-content">
             <a href="home.html" class="logo">Heavenly</a>
@@ -1314,8 +1429,8 @@
             <span>Back to Search</span>
         </button>
 
-        <div id="detailsLoading" class="loading">
-            <div>Loading hotel details…</div>
+        <div id="detailsLoading">
+            <!-- Loading state injected by JS -->
         </div>
         <div id="detailsError" class="error" style="display: none;">Unable to load hotel details.</div>
 
@@ -1395,6 +1510,15 @@
     <script type="module">
         import { getHotelById, checkHotelAvailability, createBooking } from './services/api.js';
         import { calculateBreakdown, formatCurrency } from './services/pricing.js';
+        import { createLoadingHTML, injectLoadingStyles } from './services/loading.js';
+        import { initMobileNav, injectMobileNavStyles } from './services/mobile-nav.js';
+
+        // Inject loading styles
+        injectLoadingStyles();
+
+        // Inject mobile nav styles and initialize
+        injectMobileNavStyles();
+        initMobileNav();
 
         // Initialize header "Become a Host" button handler
         // This runs independently of the hotel booking flow
@@ -1486,6 +1610,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // Show branded loading state
+            document.getElementById('detailsLoading').innerHTML = createLoadingHTML('Loading this heavenly stay...');
+            
             const userEmail = localStorage.getItem('userEmail');
             if (!userEmail) {
                 window.location.href = 'signup.html';
@@ -1534,6 +1661,23 @@
 
             const priceText = formatCurrency(calculateBreakdown(hotel.price, 1).total);
             document.getElementById('priceRow').innerHTML = `${priceText}<span>/ night</span>`;
+
+            // Update mobile booking bar price
+            const mobileBarPrice = document.getElementById('mobileBarPrice');
+            if (mobileBarPrice) {
+                mobileBarPrice.textContent = formatCurrency(hotel.price);
+            }
+
+            // Set up mobile reserve button
+            const mobileBookBtn = document.getElementById('mobileBookBtn');
+            if (mobileBookBtn) {
+                mobileBookBtn.addEventListener('click', () => {
+                    const reservationBox = document.getElementById('reservationBox');
+                    if (reservationBox) {
+                        reservationBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            }
 
             document.getElementById('infoRoomType').textContent = hotel.room_type || 'Room';
             document.getElementById('infoGuests').textContent = `${hotel.max_guests} guests`;

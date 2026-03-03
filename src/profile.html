@@ -551,9 +551,7 @@
         <div class="bookings-container">
             <h2 class="section-title">Booking History</h2>
             <div id="bookingsContent">
-                <div class="loading">
-                    <div>Loading your bookings...</div>
-                </div>
+                <!-- Loading state injected by JS -->
             </div>
         </div>
     </div>
@@ -562,13 +560,25 @@
         import { API_BASE } from './services/api.js';
         import { initTracker } from './services/tracker.js';
         import { calculateBreakdown, formatCurrency } from './services/pricing.js';
+        import { createCompactLoadingHTML, injectLoadingStyles, getLogoUrl } from './services/loading.js';
+        import { initMobileNav, injectMobileNavStyles } from './services/mobile-nav.js';
         initTracker('profile');
+
+        // Inject loading styles
+        injectLoadingStyles();
+
+        // Inject mobile nav styles and initialize
+        injectMobileNavStyles();
+        initMobileNav();
 
         // Set logo source using backend URL
         const logoImg = document.getElementById('headerLogo');
         if (logoImg) {
-            logoImg.src = API_BASE + '/uploads/logo/heavenly_logo_png.png';
+            logoImg.src = getLogoUrl();
         }
+
+        // Show initial loading state for bookings
+        document.getElementById('bookingsContent').innerHTML = createCompactLoadingHTML('Loading your bookings...');
 
         // Initialize header "Become a Host" button handler
         function initializeHeaderBecomeHostButton() {

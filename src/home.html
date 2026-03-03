@@ -516,18 +516,12 @@
     <div class="main-content">
         <div class="section-title">Recently Listed Hotels</div>
         <div class="hotels-grid" id="recentHotels">
-            <div class="loading">
-                <img id="loadingLogo1" src="" alt="Heavenly logo" class="loading-logo">
-                <div>Loading hotels...</div>
-            </div>
+            <!-- Loading state injected by JS -->
         </div>
 
         <div class="section-title">Hotels in Mumbai</div>
         <div class="hotels-grid" id="mumbaiHotels">
-            <div class="loading">
-                <img id="loadingLogo2" src="" alt="Heavenly logo" class="loading-logo">
-                <div>Loading hotels...</div>
-            </div>
+            <!-- Loading state injected by JS -->
         </div>
     </div>
 
@@ -542,25 +536,24 @@
                     window.__API_BASE__ = 'https://travel-app-96ld.onrender.com';
                 }
             }
-            // Set logo sources after API_BASE is configured
+            // Set header logo source after API_BASE is configured
             const logoPath = window.__API_BASE__ + '/uploads/logo/heavenly_logo_png.png';
-            document.querySelectorAll('#headerLogo, [id^="loadingLogo"]').forEach(img => {
-                img.src = logoPath;
-            });
+            const headerLogo = document.getElementById('headerLogo');
+            if (headerLogo) headerLogo.src = logoPath;
         })();
     </script>
     <script type="module">
         import { getRecentHotels, getHotelsByCity } from './services/api.js';
         import { calculateDisplayPrice, formatCurrency } from './services/pricing.js';
+        import { createLoadingHTML, injectLoadingStyles, getLogoUrl } from './services/loading.js';
+        import { initMobileNav, injectMobileNavStyles } from './services/mobile-nav.js';
 
-        // Helper function to generate branded loading HTML
-        const logoUrl = (window.__API_BASE__ || 'https://travel-app-96ld.onrender.com') + '/uploads/logo/heavenly_logo_png.png';
-        function createLoadingHTML(message = 'Loading...') {
-            return `<div class="loading">
-                <img src="${logoUrl}" alt="Heavenly logo" class="loading-logo">
-                <div>${message}</div>
-            </div>`;
-        }
+        // Inject loading styles
+        injectLoadingStyles();
+
+        // Inject mobile nav styles and initialize
+        injectMobileNavStyles();
+        initMobileNav();
 
         // Initialize header "Become a Host" button handler
         function initializeHeaderBecomeHostButton() {
@@ -629,25 +622,25 @@
 
         async function loadRecentHotels() {
             const container = document.getElementById('recentHotels');
-            container.innerHTML = createLoadingHTML('Loading hotels...');
+            container.innerHTML = createLoadingHTML('Finding heavenly stays for you...');
             try {
                 const hotels = await getRecentHotels();
                 renderHotels('recentHotels', hotels);
             } catch (error) {
                 console.error('Error loading recent hotels:', error);
-                container.innerHTML = createLoadingHTML('Failed to load hotels');
+                container.innerHTML = createLoadingHTML('Unable to load hotels');
             }
         }
 
         async function loadMumbaiHotels() {
             const container = document.getElementById('mumbaiHotels');
-            container.innerHTML = createLoadingHTML('Loading hotels...');
+            container.innerHTML = createLoadingHTML('Discovering Mumbai hotels...');
             try {
                 const hotels = await getHotelsByCity('Mumbai');
                 renderHotels('mumbaiHotels', hotels);
             } catch (error) {
                 console.error('Error loading Mumbai hotels:', error);
-                container.innerHTML = createLoadingHTML('Failed to load hotels');
+                container.innerHTML = createLoadingHTML('Unable to load hotels');
             }
         }
 
