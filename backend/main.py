@@ -14,9 +14,11 @@ from fastapi.responses import JSONResponse
 from routes.auth import router as auth_router
 from routes.hotels import router as hotels_router
 from routes.activity import router as activity_router
-from config.database import init_database
+from config.database import init_database, SessionLocal
+from models.models import Hotel
 from middleware.rate_limiter import start_cleanup_task, stop_cleanup_task
 from services.analytics_worker import analytics_worker
+from load_hotels import load_sample_data
 
 # Configure logging to see email debugging
 logging.basicConfig(
@@ -73,6 +75,23 @@ async def startup_event():
     if ENVIRONMENT == "production" and len(jwt_secret) < 32:
         raise RuntimeError("FATAL: JWT_SECRET_KEY must be at least 32 characters in production")
     init_database()
+    
+    # Seed hotels table if empty
+    try:
+        db = SessionLocal()
+        hotel_count = db.query(Hotel).count()
+        db.close()
+        
+        if hotel_count == 0:
+            logging.info("Hotels table is empty. Seeding with sample data...")
+            load_sample_data()
+            logging.info("✓ Sample hotels loaded successfully.")
+        else:
+            logging.info(f"Hotels table already contains {hotel_count} hotels. Skipping seed.")
+    except Exception as e:
+        logging.error(f"Error during hotel seeding: {e}", exc_info=True)
+        # Don't fail startup — seeding is optional, main app should still run
+    
     # Start the rate-limiter background cleanup (evicts stale entries every 10 min)
     start_cleanup_task()
     # Start the analytics background worker (drains buffer → bulk INSERT)
